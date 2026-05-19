@@ -1,0 +1,23 @@
+# Weights and large models
+weights/
+*.pth
+*.pt
+*.onnx
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDEs and OS
+.vscode/
+.idea/
+.DS_Store
