@@ -295,8 +295,8 @@ def visualize_results(
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
     # 결과 저장 폴더 생성 및 저장
-    Path(f"results/{dataset_name}").mkdir(parents=True, exist_ok=True)
-    save_path = f"results/{dataset_name}_{model_name}_learning_curves.png"
+    Path(f"results/{model_name}").mkdir(parents=True, exist_ok=True)
+    save_path = f"results/{model_name}/learning_curve_{dataset_name}.png"
     plt.savefig(save_path)
 
     print(f"\nLearning curves saved to: {save_path}")
@@ -357,8 +357,9 @@ def visualize_confusion_matrix(
             )
 
     fig.tight_layout()
-    Path(f"results/{dataset_name}").mkdir(parents=True, exist_ok=True)
-    save_path = f"results/{dataset_name}_{model_name}_confusion_matrix.png"
+    Path(f"results/{model_name}").mkdir(parents=True, exist_ok=True)
+    save_path = f"results/{model_name}/confusion_matrix_{dataset_name}.png"
     fig.savefig(save_path)
+
     print(f"Confusion matrix saved to: {save_path}")
     plt.close(fig)
