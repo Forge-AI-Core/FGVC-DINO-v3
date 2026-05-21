@@ -3,7 +3,7 @@
 data:
 
   BATCH_SIZE: 32
-  IMAGE_SIZE: 224
+  IMAGE_SIZE: 384
   CROPS_0PCT:
     CROPS_0PCT_NAME: "crops_0pct"
     DATASET_DIR: "data/Iron-Scraps/classification_split/crops_0pct_split"
@@ -30,7 +30,7 @@ model:
     NAME: "dinov3_vith16plus"
     PATH: "models/dino/weights/backbone/dinov3_vit_h_16plus_pretrain_lvd1689m.pth"
 
-  HIDDEN_DIM: 128
+  HIDDEN_DIM: 512
   NUM_CLASSES: 3
   LORA_RANK: 16
   LORA_ALPHA: 16
