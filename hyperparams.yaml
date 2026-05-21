@@ -1,0 +1,46 @@
+# 하이퍼파라미터
+
+data:
+
+  BATCH_SIZE: 32
+  IMAGE_SIZE: 224
+  CROPS_0PCT:
+    CROPS_0PCT_NAME: "crops_0pct"
+    DATASET_DIR: "data/Iron-Scraps/classification_split/crops_0pct_split"
+  CROPS_10PCT:
+    CROPS_10PCT_NAME: "crops_10pct"
+    DATASET_DIR: "data/Iron-Scraps/classification_split/crops_10pct_split"
+  CROPS_25PCT:
+    CROPS_25PCT_NAME: "crops_25pct"
+    DATASET_DIR: "data/Iron-Scraps/classification_split/crops_25pct_split"
+
+
+model:
+
+  vits16:
+    NAME: "dinov3_vits16"
+    PATH: "models/dino/weights/backbone/dinov3_vits16_pretrain_lvd1689m-08c60483.pth"
+  vitb16:
+    NAME: "dinov3_vitb16"
+    PATH: "models/dino/weights/backbone/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth"
+  vitl16:
+    NAME: "dinov3_vitl16"
+    PATH: "models/dino/weights/backbone/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth"
+  vith16plus:
+    NAME: "dinov3_vith16plus"
+    PATH: "models/dino/weights/backbone/dinov3_vit_h_16plus_pretrain_lvd1689m.pth"
+
+  HIDDEN_DIM: 128
+  NUM_CLASSES: 3
+  LORA_RANK: 16
+  LORA_ALPHA: 16
+  TARGET_MODULES: ["qkv"]
+
+
+train:
+
+  NUM_EPOCHS: 50
+  LEARNING_RATE: 2e-5
+  WEIGHT_DECAY: 5e-6
+  EARLY_STOPPING_PATIENCE: 7
+  CHECKPOINT_DIR: "models/dino/weights/linear-peft-lora"

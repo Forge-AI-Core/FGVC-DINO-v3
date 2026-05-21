@@ -1,0 +1,31 @@
+[project]
+name = "fgvc-dino-v3"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ipykernel>=7.2.0",
+    "matplotlib>=3.10.9",
+    "peft>=0.19.1",
+    "scikit-learn>=1.8.0",
+    "termcolor>=3.3.0",
+    "torch>=2.6.0",
+    "torchaudio>=2.6.0",
+    "torchmetrics>=1.9.0",
+    "torchvision>=0.21.0",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu124" }
+torchvision = { index = "pytorch-cu124" }
+torchaudio = { index = "pytorch-cu124" }
+
+[tool.basedpyright]
+exclude = ["**/node_modules", "**/__pycache__", ".venv", "data"]
+typeCheckingMode = "off"

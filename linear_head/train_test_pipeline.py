@@ -1,0 +1,364 @@
+import torch
+from torch import nn
+from pathlib import Path
+from torch.utils.data import DataLoader
+from peft import LoraConfig, get_peft_model
+from tqdm import tqdm
+
+from sklearn.metrics import (
+    average_precision_score,
+    confusion_matrix,
+    f1_score,
+    fbeta_score,
+    matthews_corrcoef,
+    precision_score,
+    recall_score,
+)
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+def get_model(
+    model_name: str,
+    model_path: Path,
+    num_classes: int,
+    hidden_dim: int = 128,
+    r: int = 16,
+    lora_alpha: int = 16,
+    target_modules: list = ["qkv"],
+) -> nn.Module:
+    """
+    Returns a LoRA-adapted DINOv3 model for downstream classification.
+    """
+    model = torch.hub.load(
+        repo_or_dir="dinov3",
+        model=model_name,
+        source="local",
+        weights=str(model_path),
+    )
+
+    embed_dim = getattr(model, "embed_dim")
+
+    model.head = nn.Sequential(
+        nn.Linear(embed_dim, hidden_dim),
+        nn.LayerNorm(hidden_dim),
+        nn.GELU(),
+        nn.Dropout(),
+        nn.Linear(hidden_dim, num_classes),
+    )
+
+    lora_config = LoraConfig(
+        r=r,
+        lora_alpha=lora_alpha,
+        lora_dropout=0.5,
+        target_modules=target_modules,
+        bias="none",
+        modules_to_save=["head"],
+    )
+
+    peft_model = get_peft_model(
+        model=model,
+        peft_config=lora_config,
+    )
+
+    return peft_model
+
+
+def train_model(
+    device: torch.device,
+    train_loader: DataLoader,
+    model: nn.Module,
+    criterion: nn.Module,
+    optimizer: torch.optim.Optimizer,
+    epoch: int,
+    num_epochs: int = 1,
+) -> tuple[float, float]:
+    model.train()
+
+    running_loss = 0.0
+    correct = 0
+    total = 0
+    progress_bar = tqdm(
+        iterable=train_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Train]"
+    )
+    for index, batch in enumerate(progress_bar):
+        optimizer.zero_grad()
+
+        images, labels = batch
+        images = images.to(device)
+        labels = labels.to(device)
+
+        with torch.autocast(device_type=device.type, dtype=torch.bfloat16):
+            logits = model(images)
+            loss = criterion(logits, labels)
+
+        loss.backward()
+        optimizer.step()
+
+        # accumulate loss
+        running_loss += loss.item()
+        # accumulate accuracy
+        predictions = logits.argmax(dim=1)
+        correct += predictions.eq(labels).sum().item()
+        total += labels.size(0)
+
+        avg_loss = running_loss / (index + 1)
+        acc = 100.0 * correct / total if total > 0 else 0.0
+
+        progress_bar.set_postfix(
+            {"avg_loss": f"{avg_loss:.4f}", "train_acc": f"{acc:.2f}%"}
+        )
+
+    # 두 번째 avg_loss: 조기 종료 또는 다른 상황에, for문을 끝까지 돌지 않았을때를 대비
+    avg_loss = running_loss / len(train_loader)
+    train_acc = 100.0 * correct / total if total > 0 else 0.0
+
+    print(
+        f"epoch {epoch+1}/{num_epochs}, train loss: {avg_loss:.4f}, train acc: {train_acc:.2f}%"
+    )
+
+    return avg_loss, train_acc
+
+
+def test_model(
+    test_loader: DataLoader,
+    model: nn.Module,
+    device: torch.device,
+    criterion: nn.Module,
+    epoch: int,
+    num_epochs: int,
+) -> tuple[float, float, float, float, float, float, float, float]:
+    model.eval()
+
+    running_loss = 0.0
+    correct = 0
+    total = 0
+    all_predictions: list[int] = []
+    all_labels: list[int] = []
+    all_probs: list[np.ndarray] = []
+    with torch.inference_mode():
+
+        progress_bar = tqdm(iterable=test_loader, desc="test")
+        for index, (images, labels) in enumerate(progress_bar):
+            images = images.to(device)
+            labels = labels.to(device)
+
+            logits = model(images)
+            loss = criterion(logits, labels)
+
+            running_loss += loss.item()
+            predictions = logits.argmax(dim=1)
+            correct += predictions.eq(labels).sum().item()
+            total += labels.size(0)
+
+            avg_loss = running_loss / (index + 1)
+            acc = 100.0 * correct / total if total > 0 else 0.0
+            progress_bar.set_postfix(
+                {"avg_loss": f"{avg_loss:.4f}", "test_acc": f"{acc:.2f}%"}
+            )
+
+            # 메트릭 계산을 위해 예측값, 실제값, 확률값 저장
+            all_predictions.extend(predictions.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+            all_probs.extend(torch.softmax(logits, dim=1).cpu().numpy())
+
+        # 두 번째 avg_loss: 조기 종료 등을 이유로 for문을 끝까지 돌지 않았을때를 대비
+        avg_loss = running_loss / len(test_loader)
+        test_acc = 100.0 * correct / total if total > 0 else 0.0
+
+        print(
+            f"epoch {epoch+1}/{num_epochs}, test loss: {avg_loss:.4f}, test acc: {test_acc:.2f}%"
+        )
+
+        # precision, recall, f1_score
+        precision = precision_score(
+            y_true=all_labels,
+            y_pred=all_predictions,
+            average="macro",
+            zero_division=0,
+        )
+        recall = recall_score(
+            y_true=all_labels,
+            y_pred=all_predictions,
+            average="macro",
+            zero_division=0,
+        )
+        f1 = f1_score(
+            y_true=all_labels,
+            y_pred=all_predictions,
+            average="macro",
+            zero_division=0,
+        )
+
+        mcc = matthews_corrcoef(y_true=all_labels, y_pred=all_predictions)
+
+        # PR-AUC (macro, one-vs-rest)
+        all_probs_np = np.array(all_probs)
+        num_classes = all_probs_np.shape[1]
+        all_labels_onehot = np.eye(num_classes)[np.array(all_labels)]
+        pr_auc = average_precision_score(
+            y_true=all_labels_onehot,
+            y_score=all_probs_np,
+            average="macro",
+        )
+
+        # F-beta (beta=0.5, precision 중시)
+        fbeta = fbeta_score(
+            y_true=all_labels,
+            y_pred=all_predictions,
+            beta=0.5,
+            average="macro",
+            zero_division=0,
+        )
+
+        print(
+            f"precision: {precision:.4f}, recall: {recall:.4f}, f1: {f1:.4f}, "
+            f"mcc: {mcc:.4f}, pr_auc: {pr_auc:.4f}, fbeta(0.5): {fbeta:.4f}"
+        )
+
+    return avg_loss, test_acc, precision, recall, f1, mcc, pr_auc, fbeta
+
+
+def visualize_results(
+    history: dict[str, list[float]], dataset_name: str, model_name: str
+) -> None:
+    """학습 결과(Loss, Acc, F1, P&R)를 시각화하여 저장합니다."""
+    epochs = range(1, len(history["train_loss"]) + 1)
+
+    plt.figure(figsize=(15, 15))
+    plt.suptitle(f"Linear-Head DINOv3 Training Results ({dataset_name})", fontsize=16)
+
+    # 1. Loss (Train & Test)
+    plt.subplot(3, 2, 1)
+    plt.plot(epochs, history["train_loss"], label="Train Loss", marker="o")
+    plt.plot(epochs, history["test_loss"], label="Test Loss", marker="x")
+    plt.title("Training & Testing Loss")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.grid(True)
+
+    # 2. Accuracy (Train & Test)
+    plt.subplot(3, 2, 2)
+    plt.plot(epochs, history["train_acc"], label="Train Acc", marker="o")
+    plt.plot(epochs, history["test_acc"], color="green", label="Test Acc", marker="s")
+    plt.title("Training & Testing Accuracy")
+    plt.xlabel("Epochs")
+    plt.ylabel("Accuracy (%)")
+    plt.legend()
+    plt.grid(True)
+
+    # 3. MCC (Matthews Correlation Coefficient)
+    plt.subplot(3, 2, 3)
+    plt.plot(epochs, history["test_mcc"], color="purple", label="MCC", marker="d")
+    plt.title("Matthews Correlation Coefficient")
+    plt.xlabel("Epochs")
+    plt.ylabel("MCC")
+    plt.legend()
+    plt.grid(True)
+
+    # 4. Precision, Recall & F1
+    plt.subplot(3, 2, 4)
+    plt.plot(epochs, history["test_precision"], label="Precision", marker="^")
+    plt.plot(epochs, history["test_recall"], label="Recall", marker="v")
+    plt.plot(epochs, history["test_f1"], color="red", label="F1", marker="d")
+    plt.title("Precision, Recall & F1 (Test)")
+    plt.xlabel("Epochs")
+    plt.ylabel("Score")
+    plt.legend()
+    plt.grid(True)
+
+    # 5. PR-AUC (Average Precision)
+    plt.subplot(3, 2, 5)
+    plt.plot(epochs, history["test_pr_auc"], color="orange", label="PR-AUC", marker="s")
+    plt.title("PR-AUC (Average Precision)")
+    plt.xlabel("Epochs")
+    plt.ylabel("PR-AUC")
+    plt.legend()
+    plt.grid(True)
+
+    # 6. F-beta (beta=0.5)
+    plt.subplot(3, 2, 6)
+    plt.plot(
+        epochs,
+        history["test_fbeta"],
+        color="teal",
+        label="F\u03b2 (\u03b2=0.5)",
+        marker="p",
+    )
+    plt.title("F-beta Score (\u03b2=0.5)")
+    plt.xlabel("Epochs")
+    plt.ylabel("F-beta")
+    plt.legend()
+    plt.grid(True)
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+    # 결과 저장 폴더 생성 및 저장
+    Path(f"results/{dataset_name}").mkdir(parents=True, exist_ok=True)
+    save_path = f"results/{dataset_name}_{model_name}_learning_curves.png"
+    plt.savefig(save_path)
+
+    print(f"\nLearning curves saved to: {save_path}")
+
+    plt.close()
+
+
+def visualize_confusion_matrix(
+    model: nn.Module,
+    test_loader: DataLoader,
+    device: torch.device,
+    class_names: list[str],
+    dataset_name: str,
+    model_name: str,
+) -> None:
+    """Confusion Matrix를 생성하고 이미지로 저장합니다."""
+    model.eval()
+    all_predictions: list[int] = []
+    all_labels: list[int] = []
+
+    with torch.inference_mode():
+        for images, labels in test_loader:
+            images = images.to(device)
+            labels = labels.to(device)
+            logits = model(images)
+            preds = logits.argmax(dim=1)
+            all_predictions.extend(preds.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+
+    cm = confusion_matrix(y_true=all_labels, y_pred=all_predictions)
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    im = ax.imshow(cm, interpolation="nearest", cmap=plt.cm.Blues)
+    ax.figure.colorbar(im, ax=ax)
+
+    ax.set(
+        xticks=range(len(class_names)),
+        yticks=range(len(class_names)),
+        xticklabels=class_names,
+        yticklabels=class_names,
+        xlabel="Predicted",
+        ylabel="Actual",
+        title=f"Confusion Matrix ({dataset_name} / {model_name})",
+    )
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+
+    # 셀에 수치 표시
+    thresh = cm.max() / 2.0
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            ax.text(
+                j,
+                i,
+                format(cm[i, j], "d"),
+                ha="center",
+                va="center",
+                color="white" if cm[i, j] > thresh else "black",
+            )
+
+    fig.tight_layout()
+    Path(f"results/{dataset_name}").mkdir(parents=True, exist_ok=True)
+    save_path = f"results/{dataset_name}_{model_name}_confusion_matrix.png"
+    fig.savefig(save_path)
+    print(f"Confusion matrix saved to: {save_path}")
+    plt.close(fig)

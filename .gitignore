@@ -21,3 +21,17 @@ ENV/
 .vscode/
 .idea/
 .DS_Store
+
+# Data and Dataset splits
+data
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# Logs
+*.log
+logs/
+
+# dino REPO
+dinov3
