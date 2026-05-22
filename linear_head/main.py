@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any
 import argparse
+import shutil
 import yaml
 import torch
 
@@ -50,6 +51,53 @@ def load_hyperparams(file_path: Path) -> dict[str, Any]:
         hyperparams = yaml.safe_load(f)
 
     return hyperparams
+
+
+def save_run_metadata(
+    hyperparam_path: Path,
+    model_name: str,
+    dataset_name: str,
+    best_metrics: dict[str, Any],
+) -> None:
+    """학습에 사용된 하이퍼파라미터 파일과 성능 지표를 결과 폴더에 저장합니다.
+
+    Args:
+        hyperparam_path (Path): 복사할 원본 하이퍼파라미터 파일 경로
+        dataset_name (str): 데이터셋 이름
+        best_metrics (dict[str, Any]): 최적 에포크의 지표 딕셔너리
+    """
+    results_dir = Path(f"results/{model_name}")
+    results_dir.mkdir(parents=True, exist_ok=True)
+
+    # 1. hyperparams.yaml 복사
+    destination_yaml_path = results_dir / f"hyperparams.yaml"
+    shutil.copy(src=hyperparam_path, dst=destination_yaml_path)
+
+    print(f"Hyperparameters saved to: {destination_yaml_path}")
+
+    # 2. 결과 지표 마크다운 생성 및 저장
+    destination_md_path = results_dir / f"metrics_{dataset_name}.md"
+
+    md_content = f"""# Training Metrics Summary ({model_name} on {dataset_name})
+
+## Best Epoch: {best_metrics['epoch']}
+
+| Metric | Value |
+| :--- | :--- |
+| Train Loss | {best_metrics['train_loss']:.4f} |
+| Train Accuracy | {best_metrics['train_acc']:.2f}% |
+| Test Loss | {best_metrics['test_loss']:.4f} |
+| Test Accuracy | {best_metrics['test_acc']:.2f}% |
+| Precision | {best_metrics['precision']:.4f} |
+| Recall | {best_metrics['recall']:.4f} |
+| F1 Score | {best_metrics['f1']:.4f} |
+| MCC | {best_metrics['mcc']:.4f} |
+| PR-AUC | {best_metrics['pr_auc']:.4f} |
+| F-beta (0.5) | {best_metrics['fbeta']:.4f} |
+"""
+    with open(file=destination_md_path, mode="w", encoding="utf-8") as f:
+        f.write(md_content)
+    print(f"Metrics report saved to: {destination_md_path}")
 
 
 def main(model_name: str, dataset_name: str) -> None:
@@ -146,6 +194,7 @@ def main(model_name: str, dataset_name: str) -> None:
 
     best_acc = 0.0
     patience_counter = 0
+    best_metrics: dict[str, Any] = {}
     for epoch in range(num_epochs):
         train_loss, train_acc = train_model(
             device=device,
@@ -188,6 +237,19 @@ def main(model_name: str, dataset_name: str) -> None:
         if test_acc > best_acc:
             best_acc = test_acc
             patience_counter = 0
+            best_metrics = {
+                "epoch": epoch + 1,
+                "train_loss": train_loss,
+                "train_acc": train_acc,
+                "test_loss": test_loss,
+                "test_acc": test_acc,
+                "precision": precision,
+                "recall": recall,
+                "f1": f1,
+                "mcc": mcc,
+                "pr_auc": pr_auc,
+                "fbeta": fbeta,
+            }
             # 최적 모델 가중치 저장
             checkpoint_dir.mkdir(parents=True, exist_ok=True)
             torch.save(
@@ -221,6 +283,15 @@ def main(model_name: str, dataset_name: str) -> None:
         dataset_name=dataset_name,
         model_name=model_name,
     )
+
+    # 학습 메타데이터 및 지표 리포트 저장
+    if best_metrics:
+        save_run_metadata(
+            hyperparam_path=hyperparam_path,
+            model_name=model_name,
+            dataset_name=dataset_name,
+            best_metrics=best_metrics,
+        )
 
 
 if __name__ == "__main__":
