@@ -35,3 +35,13 @@ logs/
 
 # dino REPO
 dinov3
+
+gcp_results
+
+# pretrained models
+yolo11l.pt
+yolo26n.pt
+
+runs
+
+results

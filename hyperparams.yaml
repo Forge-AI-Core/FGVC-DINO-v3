@@ -32,8 +32,8 @@ model:
 
   HIDDEN_DIM: 128
   NUM_CLASSES: 3
-  LORA_RANK: 32
-  LORA_ALPHA: 64
+  LORA_RANK: 16
+  LORA_ALPHA: 32
   TARGET_MODULES: ["qkv", "proj"]
 
 
