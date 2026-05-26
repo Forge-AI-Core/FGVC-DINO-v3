@@ -5,9 +5,9 @@ Meta의 **DINOv3** 백본(Backbone) 네트워크에 PEFT(LoRA) 기법과 선형 
 ---
 
 ## 📌 주요 특징
-* **Backbone**: DINOv3 (`vit_s16`, `vit_b16`, `vit_l16` 지원)
+* **Backbone**: DINOv3 (`vit_s16`, `vit_b16`, `vit_l16` 사용)
 * **Efficient Fine-Tuning**: LoRA(Low-Rank Adaptation)를 통한 매개변수 효율적 튜닝 (`qkv`, `proj` 타겟팅)
-* **Dataset**: 철스크랩 데이터셋 (crops 0%, 10%, 25% 비율 분할본 적용)
+* **Dataset**: 보고넷 철스크랩 데이터셋 (crops 0%, 10%, 25% 비율 분할본 적용)
 
 ---
 
@@ -39,7 +39,7 @@ git clone https://github.com/facebookresearch/dinov3.git
 ├── models/
 │   └── dino/
 │       └── weights/
-│           ├── backbone/         # 다운로드한 DINOv3 가중치 (.pth)
+│           ├── backbone/         # <-- **다운로드한 DINOv3 가중치 (.pth)**
 │           └── linear-peft-lora/ # LoRA 학습 완료된 체크포인트 파일
 └── results/                      # 성능 메트릭 요약 및 그래프 저장소
 ```
@@ -59,7 +59,7 @@ uv run python3 -m linear_head.main
 
 ---
 
-## 📊 학습 결과 예시 (Training Metrics)
+## 📊 학습 결과 예시 (Training Metrics) **아래와 같은 결과물들이 나옵니다**
 > **Configuration**: `dinov3_vits16` on `crops_25pct` | **Best Epoch**: 39
 
 | Metric | Value |
