@@ -39,9 +39,13 @@ dinov3
 gcp_results
 
 # pretrained models
+yolo11s.pt
 yolo11l.pt
 yolo26n.pt
 
 runs
 
 results
+
+
+train-13
