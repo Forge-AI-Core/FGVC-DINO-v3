@@ -62,7 +62,7 @@ uv run python3 -m linear_head.main
 
 ---
 
-## 📊 학습 결과 예시 (Training Metrics) **아래와 같은 결과물들이 나옵니다**
+## 📊 학습 결과 예시 (Training Metrics) **[아래와 같은 결과물들이 나옵니다]**
 > **Configuration**: `dinov3_vits16` on `crops_25pct` | **Best Epoch**: 39
 
 | Metric | Value |
@@ -90,7 +90,7 @@ uv run python3 -m linear_head.main
 
 ---
 
-## 🛠️ 기본 설정값 (`hyperparams.yaml`)
+## 🛠️ 기본 설정값 (`hyperparams.yaml`) **[results에 학습시점의 하이퍼 파라미터가 yaml파일로 자동저장됩니다.]**
 <details>
 <summary>하이퍼파라미터 상세 설정 보기</summary>
 
