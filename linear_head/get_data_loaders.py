@@ -39,6 +39,7 @@ def get_data_loader(
     # 따라서, 경로를 정확하게 클래스 폴더 상위폴더로 잡아줘야 합니다.
     # 이미지폴더로 생성한 객체는 데이터셋 타입으로 데이터로더에 즉시 인자로 넣을 수 있습니다.
     train_dataset = ImageFolder(root=dataset_dir / "train", transform=transform)
+    val_dataset = ImageFolder(root=dataset_dir / "val", transform=transform)
     test_dataset = ImageFolder(root=dataset_dir / "test", transform=transform)
 
     train_loader = DataLoader(
@@ -48,6 +49,15 @@ def get_data_loader(
         num_workers=4,
         pin_memory=True,
     )
+
+    val_loader = DataLoader(
+        dataset=val_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=4,
+        pin_memory=True,
+    )
+
     test_loader = DataLoader(
         dataset=test_dataset,
         batch_size=batch_size,
@@ -55,12 +65,5 @@ def get_data_loader(
         num_workers=4,
         pin_memory=True,
     )
-    shuffled_test_loader = DataLoader(
-        dataset=test_dataset,
-        batch_size=batch_size,
-        shuffle=True,
-        num_workers=4,
-        pin_memory=True,
-    )
 
-    return train_loader, test_loader, shuffled_test_loader
+    return train_loader, val_loader, test_loader

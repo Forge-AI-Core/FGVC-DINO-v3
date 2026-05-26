@@ -4,15 +4,18 @@ data:
 
   BATCH_SIZE: 32
   IMAGE_SIZE: 384
-  CROPS_0PCT:
+  crops_0pct:
     CROPS_0PCT_NAME: "crops_0pct"
     DATASET_DIR: "data/Iron-Scraps/classification_split/crops_0pct_split"
-  CROPS_10PCT:
+  crops_10pct:
     CROPS_10PCT_NAME: "crops_10pct"
     DATASET_DIR: "data/Iron-Scraps/classification_split/crops_10pct_split"
-  CROPS_25PCT:
+  crops_25pct:
     CROPS_25PCT_NAME: "crops_25pct"
     DATASET_DIR: "data/Iron-Scraps/classification_split/crops_25pct_split"
+  clustered:
+    DATASET_NAME: "clustered"
+    DATASET_DIR: "data/Iron-Scraps/my_classification/split_dataset"
 
 
 model:
@@ -29,6 +32,9 @@ model:
   vith16plus:
     NAME: "dinov3_vith16plus"
     PATH: "models/dino/weights/backbone/dinov3_vit_h_16plus_pretrain_lvd1689m.pth"
+  vit7b16:
+    NAME: "dinov3_vit7b16"
+    PATH: "models/dino/weights/backbone/dinov3_vit7b16_pretrain_lvd1689m-a955f4ea.pth"
 
   HIDDEN_DIM: 128
   NUM_CLASSES: 3
@@ -40,8 +46,8 @@ model:
 train:
 
   NUM_EPOCHS: 50
-  LEARNING_RATE: 2e-5
-  WEIGHT_DECAY: 5e-6
+  LEARNING_RATE: 1e-4
+  WEIGHT_DECAY: 1e-4
   EARLY_STOPPING_PATIENCE: 7
   CHECKPOINT_DIR: "models/dino/weights/linear-peft-lora"
 

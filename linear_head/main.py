@@ -6,10 +6,10 @@ import yaml
 import torch
 
 from linear_head.get_data_loaders import get_data_loader
-from linear_head.train_test_pipeline import (
+from linear_head.train_val_pipeline import (
     get_model,
     train_model,
-    test_model,
+    val_model,
     visualize_results,
     visualize_confusion_matrix,
 )
@@ -86,8 +86,8 @@ def save_run_metadata(
 | :--- | :--- |
 | Train Loss | {best_metrics['train_loss']:.4f} |
 | Train Accuracy | {best_metrics['train_acc']:.2f}% |
-| Test Loss | {best_metrics['test_loss']:.4f} |
-| Test Accuracy | {best_metrics['test_acc']:.2f}% |
+| Val Loss | {best_metrics['val_loss']:.4f} |
+| Val Accuracy | {best_metrics['val_acc']:.2f}% |
 | Precision | {best_metrics['precision']:.4f} |
 | Recall | {best_metrics['recall']:.4f} |
 | F1 Score | {best_metrics['f1']:.4f} |
@@ -136,6 +136,9 @@ def main(model_name: str, dataset_name: str) -> None:
     elif dataset_name == "crops_25pct":
         dataset_dir = Path(hyperparams["data"]["CROPS_25PCT"]["DATASET_DIR"])
         dataset_name = hyperparams["data"]["CROPS_25PCT"]["CROPS_25PCT_NAME"]
+    elif dataset_name == "clustered":
+        dataset_dir = Path(hyperparams["data"]["clustered"]["DATASET_DIR"])
+        dataset_name = hyperparams["data"]["clustered"]["DATASET_NAME"]
     else:
         raise ValueError(f"Invalid dataset name: {dataset_name}")
 
@@ -153,7 +156,7 @@ def main(model_name: str, dataset_name: str) -> None:
     early_stopping_patience = hyperparams["train"]["EARLY_STOPPING_PATIENCE"]
     checkpoint_dir = Path(hyperparams["train"]["CHECKPOINT_DIR"])
 
-    train_loader, test_loader, _ = get_data_loader(
+    train_loader, val_loader, _ = get_data_loader(
         dataset_dir=dataset_dir,
         batch_size=batch_size,
         image_size=image_size,
@@ -182,14 +185,14 @@ def main(model_name: str, dataset_name: str) -> None:
     history = {
         "train_loss": [],
         "train_acc": [],
-        "test_loss": [],
-        "test_acc": [],
-        "test_precision": [],
-        "test_recall": [],
-        "test_f1": [],
-        "test_mcc": [],
-        "test_pr_auc": [],
-        "test_fbeta": [],
+        "val_loss": [],
+        "val_acc": [],
+        "val_precision": [],
+        "val_recall": [],
+        "val_f1": [],
+        "val_mcc": [],
+        "val_pr_auc": [],
+        "val_fbeta": [],
     }
 
     best_acc = 0.0
@@ -207,8 +210,8 @@ def main(model_name: str, dataset_name: str) -> None:
         )
 
         # 에포크마다 성능 검증 및 얼리스탑핑 체크
-        test_loss, test_acc, precision, recall, f1, mcc, pr_auc, fbeta = test_model(
-            test_loader=test_loader,
+        val_loss, val_acc, precision, recall, f1, mcc, pr_auc, fbeta = val_model(
+            val_loader=val_loader,
             model=model,
             device=device,
             criterion=criterion,
@@ -217,32 +220,32 @@ def main(model_name: str, dataset_name: str) -> None:
         )
 
         print(
-            f"Epoch {epoch+1}/{num_epochs} - Train Loss: {train_loss:.4f} Train Acc: {train_acc:.4f} - Test Loss: {test_loss:.4f} Test Acc: {test_acc:.4f}\n"
+            f"Epoch {epoch+1}/{num_epochs} - Train Loss: {train_loss:.4f} Train Acc: {train_acc:.4f} - Val Loss: {val_loss:.4f} Val Acc: {val_acc:.4f}\n"
         )
 
         # 기록 저장
         history["train_loss"].append(train_loss)
         history["train_acc"].append(train_acc)
-        history["test_loss"].append(test_loss)
-        history["test_acc"].append(test_acc)
-        history["test_precision"].append(precision)
-        history["test_recall"].append(recall)
-        history["test_f1"].append(f1)
-        history["test_mcc"].append(mcc)
-        history["test_pr_auc"].append(pr_auc)
-        history["test_fbeta"].append(fbeta)
+        history["val_loss"].append(val_loss)
+        history["val_acc"].append(val_acc)
+        history["val_precision"].append(precision)
+        history["val_recall"].append(recall)
+        history["val_f1"].append(f1)
+        history["val_mcc"].append(mcc)
+        history["val_pr_auc"].append(pr_auc)
+        history["val_fbeta"].append(fbeta)
 
         lr_scheduler.step()
 
-        if test_acc > best_acc:
-            best_acc = test_acc
+        if val_acc > best_acc:
+            best_acc = val_acc
             patience_counter = 0
             best_metrics = {
                 "epoch": epoch + 1,
                 "train_loss": train_loss,
                 "train_acc": train_acc,
-                "test_loss": test_loss,
-                "test_acc": test_acc,
+                "val_loss": val_loss,
+                "val_acc": val_acc,
                 "precision": precision,
                 "recall": recall,
                 "f1": f1,
@@ -277,9 +280,9 @@ def main(model_name: str, dataset_name: str) -> None:
     model.load_state_dict(torch.load(best_model_path, weights_only=True))
     visualize_confusion_matrix(
         model=model,
-        test_loader=test_loader,
+        val_loader=val_loader,
         device=device,
-        class_names=test_loader.dataset.classes,
+        class_names=val_loader.dataset.classes,
         dataset_name=dataset_name,
         model_name=model_name,
     )
@@ -299,7 +302,7 @@ if __name__ == "__main__":
         input("Enter model name (vits16, vitb16, vitl16, vith16plus): ").lower().strip()
     )
     dataset_name = (
-        input("Enter dataset name (crops_0pct, crops_10pct, crops_25pct): ")
+        input("Enter dataset name (crops_0pct, crops_10pct, crops_25pct, clustered): ")
         .lower()
         .strip()
     )
