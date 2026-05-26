@@ -50,6 +50,9 @@ git clone https://github.com/facebookresearch/dinov3.git
 프로젝트 패키지 및 런타임 관리에 `uv`를 사용합니다.
 
 ```bash
+# 0. 사전 준비
+디노 레포지토리를 클론, 가중치 파일 저장, 원하는 데이터셋 준비
+
 # 1. 가상환경 및 의존성 동기화
 uv sync
 
