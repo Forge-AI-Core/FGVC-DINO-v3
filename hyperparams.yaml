@@ -36,7 +36,7 @@ model:
     NAME: "dinov3_vit7b16"
     PATH: "models/dino/weights/backbone/dinov3_vit7b16_pretrain_lvd1689m-a955f4ea.pth"
 
-  HIDDEN_DIM: 128
+  HIDDEN_DIM: 256
   NUM_CLASSES: 3
   LORA_RANK: 32
   LORA_ALPHA: 64
@@ -45,9 +45,9 @@ model:
 
 train:
 
-  NUM_EPOCHS: 50
+  NUM_EPOCHS: 100
   LEARNING_RATE: 5e-5
   WEIGHT_DECAY: 1e-3
-  EARLY_STOPPING_PATIENCE: 7
+  EARLY_STOPPING_PATIENCE: 10
   CHECKPOINT_DIR: "models/dino/weights/linear-peft-lora"
 
