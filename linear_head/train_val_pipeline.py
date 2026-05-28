@@ -22,7 +22,8 @@ def get_model(
     model_name: str,
     model_path: Path,
     num_classes: int,
-    hidden_dim: int = 128,
+    hidden_dim1: int,
+    hidden_dim2: int,
     r: int = 16,
     lora_alpha: int = 16,
     target_modules: list = ["qkv"],
@@ -40,11 +41,15 @@ def get_model(
     embed_dim = getattr(model, "embed_dim")
 
     model.head = nn.Sequential(
-        nn.Linear(embed_dim, hidden_dim),
-        nn.LayerNorm(hidden_dim),
+        nn.Linear(embed_dim, hidden_dim1),
+        nn.LayerNorm(hidden_dim1),
         nn.GELU(),
         nn.Dropout(),
-        nn.Linear(hidden_dim, num_classes),
+        nn.Linear(hidden_dim1, hidden_dim2),
+        nn.LayerNorm(hidden_dim2),
+        nn.GELU(),
+        nn.Dropout(),
+        nn.Linear(hidden_dim2, num_classes),
     )
 
     lora_config = LoraConfig(

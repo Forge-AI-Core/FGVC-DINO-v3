@@ -100,16 +100,15 @@ def save_run_metadata(
     print(f"Metrics report saved to: {destination_md_path}")
 
 
-def main(model_name: str, dataset_name: str) -> None:
+def main(model_name: str, dataset_name: str, hyperparam_path: Path) -> None:
     """main function \n
     Args:
         model_name: (vits16, vitb16, vitl16, vith16plus)\n
-        dataset_name: (crops_0pct, crops_10pct, crops_25pct)\n
+        dataset_name: (vanilla_0pct, vanilla_10pct, vanilla_25pct, unique_sampling_0pct, unique_sampling_10pct, unique_sampling_25pct)\n
+        hyperparam_path (Path): 하이퍼파라미터 설정 파일 경로
     Returns:
         None
     """
-    args = parse_cli_args()
-    hyperparam_path = Path(args.hyperparams)
     hyperparams = load_hyperparams(hyperparam_path)
 
     if model_name == "vits16":
@@ -127,18 +126,24 @@ def main(model_name: str, dataset_name: str) -> None:
     else:
         raise ValueError(f"Invalid model name: {model_name}")
 
-    if dataset_name == "crops_0pct":
-        dataset_dir = Path(hyperparams["data"]["CROPS_0PCT"]["DATASET_DIR"])
-        dataset_name = hyperparams["data"]["CROPS_0PCT"]["CROPS_0PCT_NAME"]
-    elif dataset_name == "crops_10pct":
-        dataset_dir = Path(hyperparams["data"]["CROPS_10PCT"]["DATASET_DIR"])
-        dataset_name = hyperparams["data"]["CROPS_10PCT"]["CROPS_10PCT_NAME"]
-    elif dataset_name == "crops_25pct":
-        dataset_dir = Path(hyperparams["data"]["CROPS_25PCT"]["DATASET_DIR"])
-        dataset_name = hyperparams["data"]["CROPS_25PCT"]["CROPS_25PCT_NAME"]
-    elif dataset_name == "clustered":
-        dataset_dir = Path(hyperparams["data"]["clustered"]["DATASET_DIR"])
-        dataset_name = hyperparams["data"]["clustered"]["DATASET_NAME"]
+    if dataset_name == "vanilla_0pct":
+        dataset_dir = Path(hyperparams["data"]["vanilla_0pct"]["DATASET_DIR"])
+        dataset_name = hyperparams["data"]["vanilla_0pct"]["DATASET_NAME"]
+    elif dataset_name == "vanilla_10pct":
+        dataset_dir = Path(hyperparams["data"]["vanilla_10pct"]["DATASET_DIR"])
+        dataset_name = hyperparams["data"]["vanilla_10pct"]["DATASET_NAME"]
+    elif dataset_name == "vanilla_25pct":
+        dataset_dir = Path(hyperparams["data"]["vanilla_25pct"]["DATASET_DIR"])
+        dataset_name = hyperparams["data"]["vanilla_25pct"]["DATASET_NAME"]
+    elif dataset_name == "unique_sampling_0pct":
+        dataset_dir = Path(hyperparams["data"]["unique_sampling_0pct"]["DATASET_DIR"])
+        dataset_name = hyperparams["data"]["unique_sampling_0pct"]["DATASET_NAME"]
+    elif dataset_name == "unique_sampling_10pct":
+        dataset_dir = Path(hyperparams["data"]["unique_sampling_10pct"]["DATASET_DIR"])
+        dataset_name = hyperparams["data"]["unique_sampling_10pct"]["DATASET_NAME"]
+    elif dataset_name == "unique_sampling_25pct":
+        dataset_dir = Path(hyperparams["data"]["unique_sampling_25pct"]["DATASET_DIR"])
+        dataset_name = hyperparams["data"]["unique_sampling_25pct"]["DATASET_NAME"]
     else:
         raise ValueError(f"Invalid dataset name: {dataset_name}")
 
@@ -146,6 +151,8 @@ def main(model_name: str, dataset_name: str) -> None:
     image_size = hyperparams["data"]["IMAGE_SIZE"]
 
     num_classes = hyperparams["model"]["NUM_CLASSES"]
+    hidden_dim1 = hyperparams["model"]["HIDDEN_DIM1"]
+    hidden_dim2 = hyperparams["model"]["HIDDEN_DIM2"]
     lora_rank = hyperparams["model"]["LORA_RANK"]
     lora_alpha = hyperparams["model"]["LORA_ALPHA"]
     target_modules = hyperparams["model"]["TARGET_MODULES"]
@@ -168,6 +175,8 @@ def main(model_name: str, dataset_name: str) -> None:
         model_name=model_name,
         model_path=model_path,
         num_classes=num_classes,
+        hidden_dim1=hidden_dim1,
+        hidden_dim2=hidden_dim2,
         r=lora_rank,
         lora_alpha=lora_alpha,
         target_modules=target_modules,
@@ -298,13 +307,31 @@ def main(model_name: str, dataset_name: str) -> None:
 
 
 if __name__ == "__main__":
+    args = parse_cli_args()
+    hyperparam_path = Path(args.hyperparams)
+    hyperparams = load_hyperparams(hyperparam_path)
+
+    # 설정 파일로부터 지원 가능한 모델 및 데이터셋 목록을 동적으로 파싱
+    model_options = [
+        k
+        for k, v in hyperparams.get("model", {}).items()
+        if isinstance(v, dict) and "PATH" in v
+    ]
+    dataset_options = [
+        k
+        for k, v in hyperparams.get("data", {}).items()
+        if isinstance(v, dict) and "DATASET_DIR" in v
+    ]
+
     model_name = (
-        input("Enter model name (vits16, vitb16, vitl16, vith16plus): ").lower().strip()
+        input(f"Enter model name ({', '.join(model_options)}): ").lower().strip()
     )
     dataset_name = (
-        input("Enter dataset name (crops_0pct, crops_10pct, crops_25pct, clustered): ")
-        .lower()
-        .strip()
+        input(f"Enter dataset name ({', '.join(dataset_options)}): ").lower().strip()
     )
 
-    main(model_name=model_name, dataset_name=dataset_name)
+    main(
+        model_name=model_name,
+        dataset_name=dataset_name,
+        hyperparam_path=hyperparam_path,
+    )

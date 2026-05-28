@@ -1,21 +1,28 @@
 # 하이퍼파라미터
-
 data:
 
   BATCH_SIZE: 32
   IMAGE_SIZE: 384
-  crops_0pct:
-    CROPS_0PCT_NAME: "crops_0pct"
-    DATASET_DIR: "data/Iron-Scraps/classification_split/crops_0pct_split"
-  crops_10pct:
-    CROPS_10PCT_NAME: "crops_10pct"
-    DATASET_DIR: "data/Iron-Scraps/classification_split/crops_10pct_split"
-  crops_25pct:
-    CROPS_25PCT_NAME: "crops_25pct"
-    DATASET_DIR: "data/Iron-Scraps/classification_split/crops_25pct_split"
-  clustered:
-    DATASET_NAME: "clustered"
-    DATASET_DIR: "data/Iron-Scraps/my_classification/split_dataset"
+  
+  vanilla_0pct:
+    DATASET_NAME: "vanilla_0pct"
+    DATASET_DIR: "data/Iron-Scraps/my_classification/vanilla/split_dataset"
+  vanilla_10pct:
+    DATASET_NAME: "vanilla_10pct"
+    DATASET_DIR: "data/Iron-Scraps/my_classification/vanilla/split_dataset_10pct"
+  vanilla_25pct:
+    DATASET_NAME: "vanilla_25pct"
+    DATASET_DIR: "data/Iron-Scraps/my_classification/vanilla/split_dataset_25pct"
+
+  unique_sampling_0pct:
+    DATASET_NAME: "unique_sampling_0pct"
+    DATASET_DIR: "data/Iron-Scraps/my_classification/unique_sampling/split_dataset"
+  unique_sampling_10pct:
+    DATASET_NAME: "unique_sampling_10pct"
+    DATASET_DIR: "data/Iron-Scraps/my_classification/unique_sampling/split_dataset_10pct"
+  unique_sampling_25pct:
+    DATASET_NAME: "unique_sampling_25pct"
+    DATASET_DIR: "data/Iron-Scraps/my_classification/unique_sampling/split_dataset_25pct"
 
 
 model:
@@ -36,11 +43,12 @@ model:
     NAME: "dinov3_vit7b16"
     PATH: "models/dino/weights/backbone/dinov3_vit7b16_pretrain_lvd1689m-a955f4ea.pth"
 
-  HIDDEN_DIM: 256
+  HIDDEN_DIM1: 512
+  HIDDEN_DIM2: 256
   NUM_CLASSES: 3
-  LORA_RANK: 32
-  LORA_ALPHA: 64
-  TARGET_MODULES: ["qkv", "proj"]
+  LORA_RANK: 16
+  LORA_ALPHA: 32
+  TARGET_MODULES: ["qkv", "proj", "mlp.fc1"]
 
 
 train:
