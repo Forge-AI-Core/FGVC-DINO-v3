@@ -1,8 +1,0 @@
-# yolo_data.yaml
-path: /home/kimjongha611/projects/FGVC-DINO-v3/data/Iron-Scraps/detection # 데이터셋 최상위 경로
-train: images/train # 학습 이미지 경로 (path 기준 상대경로)
-val: images/test    # 검증 이미지 경로 (path 기준 상대경로)
-
-# 클래스 개수 및 이름 (1-Class: 통합 객체)
-names:
-  0: object

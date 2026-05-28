@@ -39,3 +39,5 @@ dinov3
 hyperparams.yaml
 
 preprocess_pipeline
+
+models
