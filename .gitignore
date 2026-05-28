@@ -36,21 +36,6 @@ logs/
 # dino REPO
 dinov3
 
-gcp_results
-
-# pretrained models
-yolo11s.pt
-yolo11l.pt
-yolo26n.pt
-
-runs
-
-train-13
-
-results
-
-yolo_data.yaml
-
 hyperparams.yaml
 
 preprocess_pipeline
