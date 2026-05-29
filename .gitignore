@@ -36,5 +36,8 @@ logs/
 # dino REPO
 dinov3
 
+hyperparams.yaml
 
-results
+preprocess_pipeline
+
+models

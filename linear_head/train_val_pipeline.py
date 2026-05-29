@@ -22,7 +22,8 @@ def get_model(
     model_name: str,
     model_path: Path,
     num_classes: int,
-    hidden_dim: int = 128,
+    hidden_dim1: int,
+    hidden_dim2: int,
     r: int = 16,
     lora_alpha: int = 16,
     target_modules: list = ["qkv"],
@@ -40,11 +41,15 @@ def get_model(
     embed_dim = getattr(model, "embed_dim")
 
     model.head = nn.Sequential(
-        nn.Linear(embed_dim, hidden_dim),
-        nn.LayerNorm(hidden_dim),
+        nn.Linear(embed_dim, hidden_dim1),
+        nn.LayerNorm(hidden_dim1),
         nn.GELU(),
         nn.Dropout(),
-        nn.Linear(hidden_dim, num_classes),
+        nn.Linear(hidden_dim1, hidden_dim2),
+        nn.LayerNorm(hidden_dim2),
+        nn.GELU(),
+        nn.Dropout(),
+        nn.Linear(hidden_dim2, num_classes),
     )
 
     lora_config = LoraConfig(
@@ -120,8 +125,8 @@ def train_model(
     return avg_loss, train_acc
 
 
-def test_model(
-    test_loader: DataLoader,
+def val_model(
+    val_loader: DataLoader,
     model: nn.Module,
     device: torch.device,
     criterion: nn.Module,
@@ -138,7 +143,7 @@ def test_model(
     all_probs: list[np.ndarray] = []
     with torch.inference_mode():
 
-        progress_bar = tqdm(iterable=test_loader, desc="test")
+        progress_bar = tqdm(iterable=val_loader, desc="val")
         for index, (images, labels) in enumerate(progress_bar):
             images = images.to(device)
             labels = labels.to(device)
@@ -154,7 +159,7 @@ def test_model(
             avg_loss = running_loss / (index + 1)
             acc = 100.0 * correct / total if total > 0 else 0.0
             progress_bar.set_postfix(
-                {"avg_loss": f"{avg_loss:.4f}", "test_acc": f"{acc:.2f}%"}
+                {"avg_loss": f"{avg_loss:.4f}", "val_acc": f"{acc:.2f}%"}
             )
 
             # 메트릭 계산을 위해 예측값, 실제값, 확률값 저장
@@ -163,11 +168,11 @@ def test_model(
             all_probs.extend(torch.softmax(logits, dim=1).cpu().numpy())
 
         # 두 번째 avg_loss: 조기 종료 등을 이유로 for문을 끝까지 돌지 않았을때를 대비
-        avg_loss = running_loss / len(test_loader)
-        test_acc = 100.0 * correct / total if total > 0 else 0.0
+        avg_loss = running_loss / len(val_loader)
+        val_acc = 100.0 * correct / total if total > 0 else 0.0
 
         print(
-            f"epoch {epoch+1}/{num_epochs}, test loss: {avg_loss:.4f}, test acc: {test_acc:.2f}%"
+            f"epoch {epoch+1}/{num_epochs}, val loss: {avg_loss:.4f}, val acc: {val_acc:.2f}%"
         )
 
         # precision, recall, f1_score
@@ -216,7 +221,7 @@ def test_model(
             f"mcc: {mcc:.4f}, pr_auc: {pr_auc:.4f}, fbeta(0.5): {fbeta:.4f}"
         )
 
-    return avg_loss, test_acc, precision, recall, f1, mcc, pr_auc, fbeta
+    return avg_loss, val_acc, precision, recall, f1, mcc, pr_auc, fbeta
 
 
 def visualize_results(
@@ -228,21 +233,21 @@ def visualize_results(
     plt.figure(figsize=(15, 15))
     plt.suptitle(f"Linear-Head DINOv3 Training Results ({dataset_name})", fontsize=16)
 
-    # 1. Loss (Train & Test)
+    # 1. Loss (Train & Val)
     plt.subplot(3, 2, 1)
     plt.plot(epochs, history["train_loss"], label="Train Loss", marker="o")
-    plt.plot(epochs, history["test_loss"], label="Test Loss", marker="x")
-    plt.title("Training & Testing Loss")
+    plt.plot(epochs, history["val_loss"], label="Val Loss", marker="x")
+    plt.title("Training & Validation Loss")
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
     plt.legend()
     plt.grid(True)
 
-    # 2. Accuracy (Train & Test)
+    # 2. Accuracy (Train & Val)
     plt.subplot(3, 2, 2)
     plt.plot(epochs, history["train_acc"], label="Train Acc", marker="o")
-    plt.plot(epochs, history["test_acc"], color="green", label="Test Acc", marker="s")
-    plt.title("Training & Testing Accuracy")
+    plt.plot(epochs, history["val_acc"], color="green", label="Val Acc", marker="s")
+    plt.title("Training & Validation Accuracy")
     plt.xlabel("Epochs")
     plt.ylabel("Accuracy (%)")
     plt.legend()
@@ -250,7 +255,7 @@ def visualize_results(
 
     # 3. MCC (Matthews Correlation Coefficient)
     plt.subplot(3, 2, 3)
-    plt.plot(epochs, history["test_mcc"], color="purple", label="MCC", marker="d")
+    plt.plot(epochs, history["val_mcc"], color="purple", label="MCC", marker="d")
     plt.title("Matthews Correlation Coefficient")
     plt.xlabel("Epochs")
     plt.ylabel("MCC")
@@ -259,10 +264,10 @@ def visualize_results(
 
     # 4. Precision, Recall & F1
     plt.subplot(3, 2, 4)
-    plt.plot(epochs, history["test_precision"], label="Precision", marker="^")
-    plt.plot(epochs, history["test_recall"], label="Recall", marker="v")
-    plt.plot(epochs, history["test_f1"], color="red", label="F1", marker="d")
-    plt.title("Precision, Recall & F1 (Test)")
+    plt.plot(epochs, history["val_precision"], label="Precision", marker="^")
+    plt.plot(epochs, history["val_recall"], label="Recall", marker="v")
+    plt.plot(epochs, history["val_f1"], color="red", label="F1", marker="d")
+    plt.title("Precision, Recall & F1 (Val)")
     plt.xlabel("Epochs")
     plt.ylabel("Score")
     plt.legend()
@@ -270,7 +275,7 @@ def visualize_results(
 
     # 5. PR-AUC (Average Precision)
     plt.subplot(3, 2, 5)
-    plt.plot(epochs, history["test_pr_auc"], color="orange", label="PR-AUC", marker="s")
+    plt.plot(epochs, history["val_pr_auc"], color="orange", label="PR-AUC", marker="s")
     plt.title("PR-AUC (Average Precision)")
     plt.xlabel("Epochs")
     plt.ylabel("PR-AUC")
@@ -281,7 +286,7 @@ def visualize_results(
     plt.subplot(3, 2, 6)
     plt.plot(
         epochs,
-        history["test_fbeta"],
+        history["val_fbeta"],
         color="teal",
         label="F\u03b2 (\u03b2=0.5)",
         marker="p",
@@ -306,7 +311,7 @@ def visualize_results(
 
 def visualize_confusion_matrix(
     model: nn.Module,
-    test_loader: DataLoader,
+    val_loader: DataLoader,
     device: torch.device,
     class_names: list[str],
     dataset_name: str,
@@ -318,7 +323,7 @@ def visualize_confusion_matrix(
     all_labels: list[int] = []
 
     with torch.inference_mode():
-        for images, labels in test_loader:
+        for images, labels in val_loader:
             images = images.to(device)
             labels = labels.to(device)
             logits = model(images)

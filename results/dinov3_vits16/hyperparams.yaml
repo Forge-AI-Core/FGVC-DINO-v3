@@ -2,7 +2,7 @@
 data:
 
   BATCH_SIZE: 32
-  IMAGE_SIZE: 384
+  IMAGE_SIZE: 224
   
   vanilla_0pct:
     DATASET_NAME: "vanilla_0pct"
