@@ -100,7 +100,12 @@ def save_run_metadata(
     print(f"Metrics report saved to: {destination_md_path}")
 
 
-def main(model_name: str, dataset_name: str, hyperparam_path: Path) -> None:
+def main(
+    model_name: str,
+    dataset_name: str,
+    hyperparam_path: Path,
+    optuna_override: dict[str, Any] | None = None,
+) -> float:
     """main function \n
     Args:
         model_name: (vits16, vitb16, vitl16, vith16plus)\n
@@ -162,6 +167,21 @@ def main(model_name: str, dataset_name: str, hyperparam_path: Path) -> None:
     weight_decay = float(hyperparams["train"]["WEIGHT_DECAY"])
     early_stopping_patience = hyperparams["train"]["EARLY_STOPPING_PATIENCE"]
     checkpoint_dir = Path(hyperparams["train"]["CHECKPOINT_DIR"])
+
+    # Optuna 파라미터가 들어올 경우 덮어씌움 (Override)
+    if optuna_override is not None:
+        if "LORA_RANK" in optuna_override:
+            lora_rank = optuna_override["LORA_RANK"]
+        if "LORA_ALPHA" in optuna_override:
+            lora_alpha = optuna_override["LORA_ALPHA"]
+        if "LEARNING_RATE" in optuna_override:
+            learning_rate = optuna_override["LEARNING_RATE"]
+        if "WEIGHT_DECAY" in optuna_override:
+            weight_decay = optuna_override["WEIGHT_DECAY"]
+        if "HIDDEN_DIM1" in optuna_override:
+            hidden_dim1 = optuna_override["HIDDEN_DIM1"]
+        if "HIDDEN_DIM2" in optuna_override:
+            hidden_dim2 = optuna_override["HIDDEN_DIM2"]
 
     train_loader, val_loader, _ = get_data_loader(
         dataset_dir=dataset_dir,
@@ -265,7 +285,8 @@ def main(model_name: str, dataset_name: str, hyperparam_path: Path) -> None:
             # 최적 모델 가중치 저장
             checkpoint_dir.mkdir(parents=True, exist_ok=True)
             torch.save(
-                model.state_dict(), checkpoint_dir / f"best_model_{model_name}.pth"
+                model.state_dict(),
+                checkpoint_dir / f"best_model_{dataset_name}_{model_name}.pth",
             )
         else:
             patience_counter += 1
@@ -285,7 +306,7 @@ def main(model_name: str, dataset_name: str, hyperparam_path: Path) -> None:
     )
 
     # best 모델 가중치를 로드한 뒤 confusion matrix 생성
-    best_model_path = checkpoint_dir / f"best_model_{model_name}.pth"
+    best_model_path = checkpoint_dir / f"best_model_{dataset_name}_{model_name}.pth"
     model.load_state_dict(torch.load(best_model_path, weights_only=True))
     visualize_confusion_matrix(
         model=model,
@@ -304,6 +325,8 @@ def main(model_name: str, dataset_name: str, hyperparam_path: Path) -> None:
             dataset_name=dataset_name,
             best_metrics=best_metrics,
         )
+
+    return best_acc
 
 
 if __name__ == "__main__":

@@ -41,3 +41,5 @@ hyperparams.yaml
 preprocess_pipeline
 
 models
+
+gcs_entry_point
