@@ -96,19 +96,33 @@ uv run python3 -m linear_head.main
 
 ```yaml
 data:
+
   BATCH_SIZE: 32
-  IMAGE_SIZE: 384
-  CROPS_0PCT:
-    CROPS_0PCT_NAME: "crops_0pct"
-    DATASET_DIR: "data/Iron-Scraps/classification_split/crops_0pct_split"
-  CROPS_10PCT:
-    CROPS_10PCT_NAME: "crops_10pct"
-    DATASET_DIR: "data/Iron-Scraps/classification_split/crops_10pct_split"
-  CROPS_25PCT:
-    CROPS_25PCT_NAME: "crops_25pct"
-    DATASET_DIR: "data/Iron-Scraps/classification_split/crops_25pct_split"
+  IMAGE_SIZE: 224
+  
+  vanilla_0pct:
+    DATASET_NAME: "vanilla_0pct"
+    DATASET_DIR: "data/Iron-Scraps/my_classification/vanilla/split_dataset"
+  vanilla_10pct:
+    DATASET_NAME: "vanilla_10pct"
+    DATASET_DIR: "data/Iron-Scraps/my_classification/vanilla/split_dataset_10pct"
+  vanilla_25pct:
+    DATASET_NAME: "vanilla_25pct"
+    DATASET_DIR: "data/Iron-Scraps/my_classification/vanilla/split_dataset_25pct"
+
+  unique_sampling_0pct:
+    DATASET_NAME: "unique_sampling_0pct"
+    DATASET_DIR: "data/Iron-Scraps/my_classification/unique_sampling/split_dataset"
+  unique_sampling_10pct:
+    DATASET_NAME: "unique_sampling_10pct"
+    DATASET_DIR: "data/Iron-Scraps/my_classification/unique_sampling/split_dataset_10pct"
+  unique_sampling_25pct:
+    DATASET_NAME: "unique_sampling_25pct"
+    DATASET_DIR: "data/Iron-Scraps/my_classification/unique_sampling/split_dataset_25pct"
+
 
 model:
+
   vits16:
     NAME: "dinov3_vits16"
     PATH: "models/dino/weights/backbone/dinov3_vits16_pretrain_lvd1689m-08c60483.pth"
@@ -121,19 +135,26 @@ model:
   vith16plus:
     NAME: "dinov3_vith16plus"
     PATH: "models/dino/weights/backbone/dinov3_vit_h_16plus_pretrain_lvd1689m.pth"
+  vit7b16:
+    NAME: "dinov3_vit7b16"
+    PATH: "models/dino/weights/backbone/dinov3_vit7b16_pretrain_lvd1689m-a955f4ea.pth"
 
-  HIDDEN_DIM: 128
+  HIDDEN_DIM1: 512
+  HIDDEN_DIM2: 256
   NUM_CLASSES: 3
-  LORA_RANK: 32
-  LORA_ALPHA: 64
-  TARGET_MODULES: ["qkv", "proj"]
+  LORA_RANK: 8
+  LORA_ALPHA: 16
+  TARGET_MODULES: ["qkv", "proj", "mlp.fc1"]
+
 
 train:
-  NUM_EPOCHS: 50
-  LEARNING_RATE: 2e-5
-  WEIGHT_DECAY: 5e-6
-  EARLY_STOPPING_PATIENCE: 7
+
+  NUM_EPOCHS: 100
+  LEARNING_RATE: 5e-5
+  WEIGHT_DECAY: 5e-2
+  EARLY_STOPPING_PATIENCE: 5
   CHECKPOINT_DIR: "models/dino/weights/linear-peft-lora"
+
 ```
 </details>
 
