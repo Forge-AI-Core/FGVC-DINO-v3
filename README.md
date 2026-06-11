@@ -93,12 +93,16 @@ uv run python3 -m linear_head.train_utils.run_optuna
 ## 📈 시각화 자료 (Visualization)
 
 ### 1. 학습 곡선 (Learning Curve)
-![Learning Curve](results/dinov3_vits16/learning_curve_crops_25pct.png)
+<img width="1500" height="1500" alt="learning_curve_vanilla_25pct" src="https://github.com/user-attachments/assets/3271506c-4708-4da2-ab28-e1a183b2630c" />
+
 
 ### 2. 혼동 행렬 (Confusion Matrix)
-![Confusion Matrix](results/dinov3_vits16/confusion_matrix_crops_25pct.png)
+<img width="800" height="600" alt="confusion_matrix_vanilla_25pct" src="https://github.com/user-attachments/assets/198cd0a6-0182-4b50-9b6d-92c3875bb436" />
+
 
 ### 3. 어텐션 히트맵 (Attention Map)
+<img width="1171" height="392" alt="image" src="https://github.com/user-attachments/assets/a3e078cc-da92-419d-acc2-b0788ed47f0e" />
+
 
 </details>
 
