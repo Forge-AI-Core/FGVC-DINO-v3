@@ -72,6 +72,7 @@ num_epochs = hyperparams["train"]["NUM_EPOCHS"]
 learning_rate = float(hyperparams["train"]["LEARNING_RATE"])
 weight_decay = float(hyperparams["train"]["WEIGHT_DECAY"])
 early_stopping_patience = hyperparams["train"]["EARLY_STOPPING_PATIENCE"]
+accumulation_steps = hyperparams["train"].get("ACCUMULATION_STEPS", 1)
 
 
 ####################### #
@@ -147,6 +148,7 @@ def pipeline(
             optimizer=optimizer,
             epoch=epoch,
             num_epochs=num_epochs,
+            accumulation_steps=accumulation_steps,
         )
 
         # 검증
