@@ -1,8 +1,8 @@
 import torch
+
 from torch import nn
 from pathlib import Path
 from torch.utils.data import DataLoader
-from peft import LoraConfig, get_peft_model
 from tqdm import tqdm
 
 from sklearn.metrics import (
@@ -18,114 +18,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def get_model(
-    model_name: str,
-    model_path: Path,
-    num_classes: int,
-    hidden_dim1: int,
-    hidden_dim2: int,
-    r: int = 16,
-    lora_alpha: int = 16,
-    target_modules: list = ["qkv"],
-) -> nn.Module:
-    """
-    Returns a LoRA-adapted DINOv3 model for downstream classification.
-    """
-    model = torch.hub.load(
-        repo_or_dir="dinov3",
-        model=model_name,
-        source="local",
-        weights=str(model_path),
-    )
-
-    embed_dim = getattr(model, "embed_dim")
-
-    model.head = nn.Sequential(
-        nn.Linear(embed_dim, hidden_dim1),
-        nn.LayerNorm(hidden_dim1),
-        nn.GELU(),
-        nn.Dropout(),
-        nn.Linear(hidden_dim1, hidden_dim2),
-        nn.LayerNorm(hidden_dim2),
-        nn.GELU(),
-        nn.Dropout(),
-        nn.Linear(hidden_dim2, num_classes),
-    )
-
-    lora_config = LoraConfig(
-        r=r,
-        lora_alpha=lora_alpha,
-        lora_dropout=0.5,
-        target_modules=target_modules,
-        bias="none",
-        modules_to_save=["head"],
-    )
-
-    peft_model = get_peft_model(
-        model=model,
-        peft_config=lora_config,
-    )
-
-    return peft_model
-
-
-def train_model(
-    device: torch.device,
-    train_loader: DataLoader,
-    model: nn.Module,
-    criterion: nn.Module,
-    optimizer: torch.optim.Optimizer,
-    epoch: int,
-    num_epochs: int = 1,
-) -> tuple[float, float]:
-    model.train()
-
-    running_loss = 0.0
-    correct = 0
-    total = 0
-    progress_bar = tqdm(
-        iterable=train_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Train]"
-    )
-    for index, batch in enumerate(progress_bar):
-        optimizer.zero_grad()
-
-        images, labels = batch
-        images = images.to(device)
-        labels = labels.to(device)
-
-        with torch.autocast(device_type=device.type, dtype=torch.bfloat16):
-            logits = model(images)
-            loss = criterion(logits, labels)
-
-        loss.backward()
-        optimizer.step()
-
-        # accumulate loss
-        running_loss += loss.item()
-        # accumulate accuracy
-        predictions = logits.argmax(dim=1)
-        correct += predictions.eq(labels).sum().item()
-        total += labels.size(0)
-
-        avg_loss = running_loss / (index + 1)
-        acc = 100.0 * correct / total if total > 0 else 0.0
-
-        progress_bar.set_postfix(
-            {"avg_loss": f"{avg_loss:.4f}", "train_acc": f"{acc:.2f}%"}
-        )
-
-    # 두 번째 avg_loss: 조기 종료 또는 다른 상황에, for문을 끝까지 돌지 않았을때를 대비
-    avg_loss = running_loss / len(train_loader)
-    train_acc = 100.0 * correct / total if total > 0 else 0.0
-
-    print(
-        f"epoch {epoch+1}/{num_epochs}, train loss: {avg_loss:.4f}, train acc: {train_acc:.2f}%"
-    )
-
-    return avg_loss, train_acc
-
-
-def val_model(
+########### #
+# 검증 함수
+########### #
+def validate_model(
     val_loader: DataLoader,
     model: nn.Module,
     device: torch.device,
@@ -135,14 +31,18 @@ def val_model(
 ) -> tuple[float, float, float, float, float, float, float, float]:
     model.eval()
 
+    # initialize metrics
     running_loss = 0.0
     correct = 0
     total = 0
+    avg_loss = 0.0
+    val_acc = 0.0
     all_predictions: list[int] = []
     all_labels: list[int] = []
     all_probs: list[np.ndarray] = []
-    with torch.inference_mode():
 
+    # validation loop
+    with torch.inference_mode():
         progress_bar = tqdm(iterable=val_loader, desc="val")
         for index, (images, labels) in enumerate(progress_bar):
             images = images.to(device)
@@ -151,25 +51,25 @@ def val_model(
             logits = model(images)
             loss = criterion(logits, labels)
 
+            # loss
             running_loss += loss.item()
+            avg_loss = running_loss / (index + 1)
+
+            # accuracy
             predictions = logits.argmax(dim=1)
             correct += predictions.eq(labels).sum().item()
             total += labels.size(0)
+            val_acc = 100.0 * correct / total if total > 0 else 0.0
 
-            avg_loss = running_loss / (index + 1)
-            acc = 100.0 * correct / total if total > 0 else 0.0
+            # postfix
             progress_bar.set_postfix(
-                {"avg_loss": f"{avg_loss:.4f}", "val_acc": f"{acc:.2f}%"}
+                {"avg_loss": f"{avg_loss:.4f}", "val_acc": f"{val_acc:.2f}%"}
             )
 
             # 메트릭 계산을 위해 예측값, 실제값, 확률값 저장
             all_predictions.extend(predictions.cpu().numpy())
             all_labels.extend(labels.cpu().numpy())
             all_probs.extend(torch.softmax(logits, dim=1).cpu().numpy())
-
-        # 두 번째 avg_loss: 조기 종료 등을 이유로 for문을 끝까지 돌지 않았을때를 대비
-        avg_loss = running_loss / len(val_loader)
-        val_acc = 100.0 * correct / total if total > 0 else 0.0
 
         print(
             f"epoch {epoch+1}/{num_epochs}, val loss: {avg_loss:.4f}, val acc: {val_acc:.2f}%"
@@ -224,6 +124,9 @@ def val_model(
     return avg_loss, val_acc, precision, recall, f1, mcc, pr_auc, fbeta
 
 
+######################################## #
+# validation 결과에 대한 그래프 시각화 함수
+######################################## #
 def visualize_results(
     history: dict[str, list[float]], dataset_name: str, model_name: str
 ) -> None:
@@ -309,6 +212,9 @@ def visualize_results(
     plt.close()
 
 
+##################################### #
+# validation 결과에 대한 콘퓨전 매트릭스
+##################################### #
 def visualize_confusion_matrix(
     model: nn.Module,
     val_loader: DataLoader,

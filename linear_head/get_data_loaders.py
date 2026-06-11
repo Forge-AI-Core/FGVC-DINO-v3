@@ -8,23 +8,32 @@ from torch.utils.data import DataLoader
 import PIL
 
 
+####################### #
+# 심플한 커스텀 패딩 클래스
+####################### #
+class SquarePad:
+    """정사각형이 아닌 이미지를 정사각형으로 패딩 처리하는 클래스입니다."""
+
+    def __call__(self, image: PIL.Image.Image) -> PIL.Image.Image:
+        w, h = image.size
+        max_wh = max(w, h)
+
+        pad_left = int((max_wh - w) / 2)
+        pad_top = int((max_wh - h) / 2)
+        pad_right = max_wh - w - pad_left
+        pad_bottom = max_wh - h - pad_top
+
+        padding = (pad_left, pad_top, pad_right, pad_bottom)
+
+        return F.pad(img=image, padding=padding)
+
+
+############ #
+# 데이터 로더
+############ #
 def get_data_loader(
     dataset_dir: Path, batch_size: int = 32, image_size: int = 224
 ) -> tuple[DataLoader, DataLoader, DataLoader]:
-
-    class SquarePad:
-        def __call__(self, image: PIL.Image.Image) -> PIL.Image.Image:
-            w, h = image.size
-            max_wh = max(w, h)
-
-            pad_left = int((max_wh - w) / 2)
-            pad_top = int((max_wh - h) / 2)
-            pad_right = max_wh - w - pad_left
-            pad_bottom = max_wh - h - pad_top
-
-            padding = (pad_left, pad_top, pad_right, pad_bottom)
-
-            return F.pad(img=image, padding=padding)
 
     train_transform = transforms.Compose(
         [
