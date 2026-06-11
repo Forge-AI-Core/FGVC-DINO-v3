@@ -12,8 +12,10 @@ from linear_head.validate import validate_model
 
 args = parse_args()
 hyperparams = load_hyperparams(file_path=args.hyperparams)
-model_name = input("Enter model name: ")
-dataset_name = input("Enter dataset name: ")
+model_name = input("Enter model name (vits16, vitb16, vitl16, vith16plus): ")
+dataset_name = input(
+    "Enter dataset name (vanilla_0pct, vanilla_10pct, vanilla_25pct, unique_sampling_0pct, unique_sampling_10pct, unique_sampling_25pct): "
+)
 
 # model config variable
 if model_name == "vits16":
