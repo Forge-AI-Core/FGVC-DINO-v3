@@ -53,9 +53,14 @@ model:
 
 train:
 
-  NUM_EPOCHS: 100
+  NUM_EPOCHS: 1
   LEARNING_RATE: 5e-5
   WEIGHT_DECAY: 5e-2
   EARLY_STOPPING_PATIENCE: 5
-  CHECKPOINT_DIR: "models/dino/weights/linear-peft-lora"
+
+
+test:
+
+  linear_lora:
+    CHECKPOINT_DIR: "models/dino/weights/linear-peft-lora"
 
