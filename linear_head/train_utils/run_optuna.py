@@ -5,7 +5,8 @@ import optuna
 import torch
 
 # 기존 trainer.py의 학습 함수 임포트
-from linear_head.main import load_hyperparams, get_model, parse_args
+from linear_head.main import load_hyperparams, parse_args
+from linear_head.train_test_elements import get_model
 from linear_head.get_data_loaders import get_data_loader
 from linear_head.train import train_model
 from linear_head.validate import validate_model

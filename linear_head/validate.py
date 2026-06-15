@@ -76,24 +76,24 @@ def validate_model(
         )
 
         # precision, recall, f1_score
-        precision = precision_score(
+        danger_precision = precision_score(
             y_true=all_labels,
             y_pred=all_predictions,
-            average="macro",
+            average=None,
             zero_division=0,
-        )
-        recall = recall_score(
+        )[1]
+        danger_recall = recall_score(
             y_true=all_labels,
             y_pred=all_predictions,
-            average="macro",
+            average=None,
             zero_division=0,
-        )
-        f1 = f1_score(
+        )[1]
+        danger_f1 = f1_score(
             y_true=all_labels,
             y_pred=all_predictions,
-            average="macro",
+            average=None,
             zero_division=0,
-        )
+        )[1]
 
         mcc = matthews_corrcoef(y_true=all_labels, y_pred=all_predictions)
 
@@ -101,27 +101,26 @@ def validate_model(
         all_probs_np = np.array(all_probs)
         num_classes = all_probs_np.shape[1]
         all_labels_onehot = np.eye(num_classes)[np.array(all_labels)]
-        pr_auc = average_precision_score(
-            y_true=all_labels_onehot,
-            y_score=all_probs_np,
-            average="macro",
+        danger_pr_auc = average_precision_score(
+            y_true=all_labels_onehot[:, 1],
+            y_score=all_probs_np[:, 1],
         )
 
         # F-beta (beta=0.5, precision 중시)
-        fbeta = fbeta_score(
+        danger_fbeta = fbeta_score(
             y_true=all_labels,
             y_pred=all_predictions,
             beta=0.5,
-            average="macro",
+            average=None,
             zero_division=0,
-        )
+        )[1]
 
         print(
-            f"precision: {precision:.4f}, recall: {recall:.4f}, f1: {f1:.4f}, "
-            f"mcc: {mcc:.4f}, pr_auc: {pr_auc:.4f}, fbeta(0.5): {fbeta:.4f}"
+            f"precision: {danger_precision:.4f}, recall: {danger_recall:.4f}, f1: {danger_f1:.4f}, "
+            f"mcc: {mcc:.4f}, pr_auc: {danger_pr_auc:.4f}, fbeta(0.5): {danger_fbeta:.4f}"
         )
 
-    return avg_loss, val_acc, precision, recall, f1, mcc, pr_auc, fbeta
+    return avg_loss, val_acc, danger_precision, danger_recall, danger_f1, mcc, danger_pr_auc, danger_fbeta
 
 
 ######################################## #
