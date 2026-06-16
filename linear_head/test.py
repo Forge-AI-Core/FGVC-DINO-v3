@@ -12,6 +12,7 @@ from sklearn.metrics import (
     matthews_corrcoef,
     precision_score,
     recall_score,
+    precision_recall_curve,
 )
 
 from linear_head.get_data_loaders import get_data_loader, SquarePad
@@ -41,7 +42,7 @@ def test_model(
     image_size: int,
     test_loader: DataLoader,
     hyperparam_path: Path,
-) -> tuple[float, float, float, float, float, float, float, float]:
+) -> tuple[float, float, float, float, float, float, float, float, float]:
     model.load_state_dict(
         torch.load(checkpoint_path, map_location=device, weights_only=True)
     )
@@ -106,9 +107,29 @@ def test_model(
             zero_division=0,
         )[1]
 
+        from sklearn.metrics import precision_recall_curve
+
+        precisions, recalls, thresholds = precision_recall_curve(
+            y_true=all_labels_onehot[:, 1], y_score=all_probs_np[:, 1]
+        )
+
+        # Find threshold and recall at 0.95 precision
+        target_precision = 0.95
+        idx = np.where(precisions >= target_precision)[0]
+        if len(idx) > 0:
+            best_idx = idx[0]
+            danger_recall_at_95 = recalls[best_idx]
+            danger_threshold_at_95 = (
+                thresholds[best_idx] if best_idx < len(thresholds) else 1.0
+            )
+        else:
+            danger_recall_at_95 = 0.0
+            danger_threshold_at_95 = 1.0
+
         print(f"\n[Test Result] Acc: {test_acc:.2f}%")
         print(
             f"Danger Precision: {danger_precision:.4f}, Danger Recall: {danger_recall:.4f}, Danger F1: {danger_f1:.4f}, MCC: {mcc:.4f}, Danger PR-AUC: {danger_pr_auc:.4f}, Danger F-beta: {danger_fbeta:.4f}\n"
+            f"At 0.95 Precision -> Danger Recall: {danger_recall_at_95:.4f}, Threshold: {danger_threshold_at_95:.4f}\n"
         )
 
     return (
@@ -119,6 +140,8 @@ def test_model(
         mcc,
         danger_pr_auc,
         danger_fbeta,
+        danger_recall_at_95,
+        danger_threshold_at_95,
     )
 
 
