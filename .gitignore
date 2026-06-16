@@ -36,8 +36,11 @@ logs/
 # dino REPO
 dinov3
 
-preprocess_pipeline
+# # Preprocessing pipeline
+# preprocess_pipeline
 
+# model weights folder
 models
 
+# entry folder to tranfer objects for google storage 
 gcs_entry_point
