@@ -318,6 +318,8 @@ def run_testset_process(
         mcc,
         danger_pr_auc,
         danger_fbeta,
+        danger_recall_at_95,
+        danger_threshold_at_95,
     ) = test_model(
         checkpoint_path=checkpoint_path,
         device=device,
@@ -355,6 +357,8 @@ def run_testset_process(
             "mcc": mcc,
             "pr_auc": danger_pr_auc,
             "fbeta": danger_fbeta,
+            "recall_at_95": danger_recall_at_95,
+            "threshold_at_95": danger_threshold_at_95,
         },
         results_dir=results_dir,
     )

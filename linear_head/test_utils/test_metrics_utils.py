@@ -117,6 +117,8 @@ def save_run_test_metadata(
 | MCC | {test_metrics['mcc']:.4f} |
 | Danger PR-AUC | {test_metrics['pr_auc']:.4f} |
 | Danger F-beta (0.5) | {test_metrics['fbeta']:.4f} |
+| **Danger Recall @ 0.95 Precision** | **{test_metrics['recall_at_95']:.4f}** |
+| **Threshold @ 0.95 Precision** | **{test_metrics['threshold_at_95']:.4f}** |
 """
     # 저장
     with open(file=destination_md_path, mode="w", encoding="utf-8") as f:
