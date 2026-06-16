@@ -35,6 +35,8 @@ def get_model(
     r: int = 16,
     lora_alpha: int = 16,
     target_modules: list = ["qkv"],
+    head_dropout: float = 0.5,
+    lora_dropout: float = 0.5,
 ) -> nn.Module:
     """dino 모델 로드 및 LoRA 설정 함수"""
     model = torch.hub.load(
@@ -52,11 +54,11 @@ def get_model(
         nn.Linear(embed_dim, hidden_dim1),
         nn.LayerNorm(hidden_dim1),
         nn.GELU(),
-        nn.Dropout(),
+        nn.Dropout(p=head_dropout),
         nn.Linear(hidden_dim1, hidden_dim2),
         nn.LayerNorm(hidden_dim2),
         nn.GELU(),
-        nn.Dropout(),
+        nn.Dropout(p=head_dropout),
         nn.Linear(hidden_dim2, num_classes),
     )
 
@@ -64,7 +66,7 @@ def get_model(
     lora_config = LoraConfig(
         r=r,
         lora_alpha=lora_alpha,
-        lora_dropout=0.5,
+        lora_dropout=lora_dropout,
         target_modules=target_modules,
         bias="none",
         modules_to_save=["head"],
@@ -95,6 +97,10 @@ def get_modules(
     weight_decay: float,
     early_stopping_patience: int,
     accumulation_steps: int,
+    head_dropout: float = 0.5,
+    lora_dropout: float = 0.5,
+    focal_alpha: list[float] = [0.3, 0.4, 0.3],
+    focal_gamma: float = 2.0,
 ):
     """학습/검증/테스트에 필요한 모듈(데이터로더, 모델, 옵티마이저 등) 초기화 함수"""
     # dataloader
@@ -116,11 +122,14 @@ def get_modules(
         r=lora_rank,
         lora_alpha=lora_alpha,
         target_modules=target_modules,
+        head_dropout=head_dropout,
+        lora_dropout=lora_dropout,
     ).to(device)
 
     # loss function (Alpha-Balanced Focal Loss)
     from linear_head_focal_loss.focal_loss import FocalLoss
-    criterion = FocalLoss(alpha=[0.2, 0.6, 0.2], gamma=2.0).to(device)
+
+    criterion = FocalLoss(alpha=focal_alpha, gamma=focal_gamma).to(device)
 
     # optimizer
     optimizer = torch.optim.AdamW(
@@ -175,7 +184,7 @@ def run_train_val_process(
         "val_pr_auc": [],
         "val_fbeta": [],
     }
-    best_pr_auc = 0.0
+    best_mcc = -1.0
     patience_counter = 0
     best_metrics: dict[str, Any] = {}
     checkpoint_dir = checkpoint_path.parent
@@ -227,8 +236,8 @@ def run_train_val_process(
 
         lr_scheduler.step()
 
-        if danger_pr_auc > best_pr_auc:
-            best_pr_auc = danger_pr_auc
+        if mcc > best_mcc:
+            best_mcc = mcc
             patience_counter = 0
             best_metrics = {
                 "epoch": epoch + 1,
@@ -288,7 +297,7 @@ def run_train_val_process(
             results_dir=results_dir,
         )
 
-    return best_pr_auc
+    return best_mcc
 
 
 ########################### #

@@ -23,7 +23,6 @@ try:
     # 25% Pipeline
     from base_25pct import cropper_25pct
     from base_25pct import label_synchronizer as label_synchronizer_25
-    from base_25pct import cluster_25pct
     from base_25pct import folder_splitter_25pct
     from base_25pct import train_val_sampler_25pct
     from base_25pct import reunion_splitter_25pct
@@ -31,7 +30,6 @@ try:
     # 10% Pipeline
     from base_50pct import cropper_50pct
     from base_50pct import label_synchronizer as label_synchronizer_10
-    from base_50pct import cluster_50pct
     from base_50pct import folder_splitter_50pct
     from base_50pct import train_val_sampler_50pct
     from base_50pct import reunion_splitter_50pct
@@ -39,7 +37,6 @@ try:
     # 0% Pipeline
     from base_0pct import cropper_0pct
     from base_0pct import label_synchronizer as label_synchronizer_0
-    from base_0pct import cluster_0pct
     from base_0pct import folder_splitter_0pct
     from base_0pct import train_val_sampler_0pct
     from base_0pct import reunion_splitter_0pct
@@ -58,7 +55,7 @@ def run_pipeline() -> None:
     print("\n" + "#" * 60)
     print(" 🌟 RUNNING 25% PADDING PIPELINE 🌟 ")
     print("#" * 60)
-    
+
     print("\n" + "=" * 50)
     print(" [25%] Step 1: Cropping ")
     print("=" * 50)
@@ -70,23 +67,17 @@ def run_pipeline() -> None:
     label_synchronizer_25.main()
 
     print("\n" + "=" * 50)
-    print(" [25%] Step 3: Clustering ")
-    print("=" * 50)
-    cluster_25pct.main()
-
-    print("\n" + "=" * 50)
-    print(" [25%] Step 4: Folder Split (8:2) ")
+    print(" [25%] Step 3: Folder Split (8:2) ")
     print("=" * 50)
     folder_splitter_25pct.main()
 
-
     print("\n" + "=" * 50)
-    print(" [25%] Step 5: Train/Val Sampler (Unique) ")
+    print(" [25%] Step 4: Train/Val Sampler (Unique) ")
     print("=" * 50)
     train_val_sampler_25pct.main()
 
     print("\n" + "=" * 50)
-    print(" [25%] Step 6: Reunion Splitter (Vanilla) ")
+    print(" [25%] Step 5: Reunion Splitter (Vanilla) ")
     print("=" * 50)
     reunion_splitter_25pct.main()
 
@@ -94,7 +85,7 @@ def run_pipeline() -> None:
     print("\n" + "#" * 60)
     print(" 🌟 RUNNING 50% PADDING PIPELINE 🌟 ")
     print("#" * 60)
-    
+
     print("\n" + "=" * 50)
     print(" [50%] Step 1: Cropping ")
     print("=" * 50)
@@ -106,15 +97,9 @@ def run_pipeline() -> None:
     label_synchronizer_10.main()
 
     print("\n" + "=" * 50)
-    print(" [50%] Step 3: Clustering ")
-    print("=" * 50)
-    cluster_50pct.main()
-
-    print("\n" + "=" * 50)
     print(" [50%] Step 4: Folder Split (8:2) ")
     print("=" * 50)
     folder_splitter_50pct.main()
-
 
     print("\n" + "=" * 50)
     print(" [50%] Step 5: Train/Val Sampler (Unique) ")
@@ -130,7 +115,7 @@ def run_pipeline() -> None:
     print("\n" + "#" * 60)
     print(" 🌟 RUNNING 0% PADDING PIPELINE 🌟 ")
     print("#" * 60)
-    
+
     print("\n" + "=" * 50)
     print(" [0%] Step 1: Cropping ")
     print("=" * 50)
@@ -142,15 +127,9 @@ def run_pipeline() -> None:
     label_synchronizer_0.main()
 
     print("\n" + "=" * 50)
-    print(" [0%] Step 3: Clustering ")
-    print("=" * 50)
-    cluster_0pct.main()
-
-    print("\n" + "=" * 50)
     print(" [0%] Step 4: Folder Split (8:2) ")
     print("=" * 50)
     folder_splitter_0pct.main()
-
 
     print("\n" + "=" * 50)
     print(" [0%] Step 5: Train/Val Sampler (Unique) ")

@@ -66,12 +66,16 @@ def main():
     lora_rank = hyperparams["model"]["LORA_RANK"]
     lora_alpha = hyperparams["model"]["LORA_ALPHA"]
     target_modules = hyperparams["model"]["TARGET_MODULES"]
+    lora_dropout = hyperparams["model"].get("LORA_DROPOUT", 0.5)
+    head_dropout = hyperparams["model"].get("HEAD_DROPOUT", 0.5)
 
     num_epochs = hyperparams["train"]["NUM_EPOCHS"]
     learning_rate = float(hyperparams["train"]["LEARNING_RATE"])
     weight_decay = float(hyperparams["train"]["WEIGHT_DECAY"])
     early_stopping_patience = hyperparams["train"]["EARLY_STOPPING_PATIENCE"]
     accumulation_steps = hyperparams["train"].get("ACCUMULATION_STEPS", 1)
+    focal_alpha = hyperparams["train"].get("FOCAL_ALPHA", [0.2, 0.6, 0.2])
+    focal_gamma = float(hyperparams["train"].get("FOCAL_GAMMA", 2.0))
 
     # 설정 파일로부터 지원 가능한 모델 및 데이터셋 목록을 동적으로 파싱
     model_options = [
@@ -131,6 +135,10 @@ def main():
         weight_decay=weight_decay,
         early_stopping_patience=early_stopping_patience,
         accumulation_steps=accumulation_steps,
+        head_dropout=head_dropout,
+        lora_dropout=lora_dropout,
+        focal_alpha=focal_alpha,
+        focal_gamma=focal_gamma,
     )
 
     # patch_size 유추 (dino 모델 특성)

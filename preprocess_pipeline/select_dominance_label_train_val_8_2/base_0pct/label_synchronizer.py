@@ -1,4 +1,5 @@
 import json
+import shutil
 import gc
 from collections import Counter
 from pathlib import Path
@@ -20,13 +21,14 @@ CLS_DATA_DIR = Path("data/Iron-Scraps/set_with_testset")
 CROPPED_DATA_DIR = CLS_DATA_DIR / "crop_images_0pct"
 ORIGINAL_ANNOTATION_PATH = CLS_DATA_DIR / "crop_annotations_0pct.json"
 CORRECTED_ANNOTATION_PATH = CLS_DATA_DIR / "corrected_crop_annotations_0pct.json"
+CLUSTERED_GROUPS_DIR = CLS_DATA_DIR / "base_clustered_groups_0pct"
 HYPERPARAMS_PATH = Path("hyperparams.yaml")
 
 BATCH_SIZE = 256
 CASCADE_STEPS = [
-    ("vits16", 0.16),
-    ("vitb16", 0.14),
     ("vitl16", 0.12),
+    ("vitb16", 0.14),
+    ("vits16", 0.16),
 ]
 
 
@@ -79,7 +81,7 @@ def get_dataloader() -> tuple[DataLoader, list[Path]]:
     return dataloader, image_paths
 
 
-def load_hyperparams(file_path: Path) -> dict[str, Any]:
+def load_hyperparams(file_path: Path) -> tuple[dict[str, Any], dict[int, list[str]]]:
     with open(file=file_path, mode="r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
@@ -113,7 +115,7 @@ def get_embeddings(
     return final_embeddings
 
 
-def load_annotations(path: Path) -> dict[str, Any]:
+def load_annotations(path: Path) -> tuple[dict[str, Any], dict[int, list[str]]]:
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -140,7 +142,7 @@ def apply_majority_voting(
     threshold: float,
     annotations: dict[str, Any],
     model_name: str,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], dict[int, list[str]]]:
     print(f"[{model_name}] 클러스터링 시작 (Threshold: {threshold})")
     clustering = AgglomerativeClustering(
         n_clusters=None,
@@ -208,7 +210,7 @@ def apply_majority_voting(
         f"[{model_name}] 🚨 충돌 일어난 클러스터 군집 수: {collision_count}건 해결됨 (총 {total_corrected_images}장 라벨 교정)"
     )
 
-    return annotations
+    return annotations, clusters
 
 
 def main() -> None:
@@ -246,7 +248,7 @@ def main() -> None:
         gc.collect()
 
         # 클러스터링 및 다수결 교정 (메모리 상의 annotations 계속 업데이트)
-        annotations = apply_majority_voting(
+        annotations, last_clusters = apply_majority_voting(
             embeddings=embeddings,
             image_paths=image_paths,
             threshold=threshold,
@@ -257,6 +259,28 @@ def main() -> None:
     # 4. 최종 결과 저장
     print("\n✅ 모든 체급의 릴레이 교정이 완료되었습니다.")
     save_annotations(annotations, CORRECTED_ANNOTATION_PATH)
+
+    # 5. 최종 군집을 물리적 폴더(base_clustered_groups)로 분리 생성
+    print("\n🚀 물리적 클러스터 폴더(base_clustered_groups) 생성 시작...")
+    if CLUSTERED_GROUPS_DIR.exists():
+        shutil.rmtree(CLUSTERED_GROUPS_DIR)
+    CLUSTERED_GROUPS_DIR.mkdir(parents=True)
+    
+    crops = annotations.get("crops", {})
+    for label, filenames in last_clusters.items():
+        valid_filenames = [f for f in filenames if f in crops]
+        if not valid_filenames:
+            continue
+            
+        target_folder = CLUSTERED_GROUPS_DIR / f"cluster_{label:03d}"
+        target_folder.mkdir(parents=True, exist_ok=True)
+        for fname in valid_filenames:
+            src_path = CROPPED_DATA_DIR / fname
+            if src_path.exists():
+                shutil.copy(src_path, target_folder / fname)
+                
+    print(f"🎉 물리적 클러스터 폴더 복사 완료: {CLUSTERED_GROUPS_DIR}")
+
     print(f"🎉 최종 저장 위치: {CORRECTED_ANNOTATION_PATH}")
 
 
