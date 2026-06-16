@@ -1,28 +1,28 @@
 # 하이퍼파라미터
 data:
 
-  BATCH_SIZE: 32
+  BATCH_SIZE: 64
   IMAGE_SIZE: 224
   
   vanilla_0pct:
     DATASET_NAME: "vanilla_0pct"
-    DATASET_DIR: "data/Iron-Scraps/my_classification/vanilla/split_dataset"
-  vanilla_10pct:
-    DATASET_NAME: "vanilla_10pct"
-    DATASET_DIR: "data/Iron-Scraps/my_classification/vanilla/split_dataset_10pct"
+    DATASET_DIR: "data/Iron-Scraps/set_with_testset/vanilla/split_dataset_0pct"
   vanilla_25pct:
     DATASET_NAME: "vanilla_25pct"
-    DATASET_DIR: "data/Iron-Scraps/my_classification/vanilla/split_dataset_25pct"
+    DATASET_DIR: "data/Iron-Scraps/set_with_testset/vanilla/split_dataset_25pct"
+  vanilla_50pct:
+    DATASET_NAME: "vanilla_50pct"
+    DATASET_DIR: "data/Iron-Scraps/set_with_testset/vanilla/split_dataset_50pct"
 
   unique_sampling_0pct:
     DATASET_NAME: "unique_sampling_0pct"
-    DATASET_DIR: "data/Iron-Scraps/my_classification/unique_sampling/split_dataset"
-  unique_sampling_10pct:
-    DATASET_NAME: "unique_sampling_10pct"
-    DATASET_DIR: "data/Iron-Scraps/my_classification/unique_sampling/split_dataset_10pct"
+    DATASET_DIR: "data/Iron-Scraps/set_with_testset/unique_sampling/split_dataset_0pct"
   unique_sampling_25pct:
     DATASET_NAME: "unique_sampling_25pct"
-    DATASET_DIR: "data/Iron-Scraps/my_classification/unique_sampling/split_dataset_25pct"
+    DATASET_DIR: "data/Iron-Scraps/set_with_testset/unique_sampling/split_dataset_25pct"
+  unique_sampling_50pct:
+    DATASET_NAME: "unique_sampling_50pct"
+    DATASET_DIR: "data/Iron-Scraps/set_with_testset/unique_sampling/split_dataset_50pct"
 
 
 model:
@@ -49,15 +49,19 @@ model:
   LORA_RANK: 8
   LORA_ALPHA: 16
   TARGET_MODULES: ["qkv", "proj", "mlp.fc1"]
+  LORA_DROPOUT: 0.5
+  HEAD_DROPOUT: 0.5
+  LABEL_SMOOTHING: 0.0
 
 
 train:
 
-  NUM_EPOCHS: 1
+  NUM_EPOCHS: 50
   LEARNING_RATE: 5e-5
   WEIGHT_DECAY: 5e-2
-  EARLY_STOPPING_PATIENCE: 5
-  ACCUMULATION_STEPS: 8
+  EARLY_STOPPING_PATIENCE: 7
+  ACCUMULATION_STEPS: 1
+  STAGE1_BATCH_SIZE: 64
 
 
 test:

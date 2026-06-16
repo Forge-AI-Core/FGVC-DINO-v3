@@ -66,6 +66,9 @@ def main():
     lora_rank = hyperparams["model"]["LORA_RANK"]
     lora_alpha = hyperparams["model"]["LORA_ALPHA"]
     target_modules = hyperparams["model"]["TARGET_MODULES"]
+    lora_dropout = hyperparams["model"].get("LORA_DROPOUT", 0.5)
+    head_dropout = hyperparams["model"].get("HEAD_DROPOUT", 0.5)
+    label_smoothing = hyperparams["model"].get("LABEL_SMOOTHING", 0.0)
 
     num_epochs = hyperparams["train"]["NUM_EPOCHS"]
     learning_rate = float(hyperparams["train"]["LEARNING_RATE"])
@@ -131,6 +134,9 @@ def main():
         weight_decay=weight_decay,
         early_stopping_patience=early_stopping_patience,
         accumulation_steps=accumulation_steps,
+        head_dropout=head_dropout,
+        lora_dropout=lora_dropout,
+        label_smoothing=label_smoothing,
     )
 
     # patch_size 유추 (dino 모델 특성)
