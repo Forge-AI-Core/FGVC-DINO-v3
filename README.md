@@ -1,13 +1,14 @@
 # FGVC DINOv3 with Linear Head (LoRA PEFT)
 
-Meta의 **DINOv3** 백본(Backbone) 네트워크에 PEFT(LoRA) 기법과 선형 분류 헤드(Linear Head)를 결합하여 철스크랩(Iron-Scraps) 데이터셋의 미세 분류(Fine-Grained Visual Categorization, FGVC)를 수행하는 프로젝트입니다.
+Meta의 **DINOv3** 백본(Backbone) 네트워크에 PEFT(LoRA) 기법과 다양한 목적의 손실 함수(Loss Function) 기반 선형 분류 헤드(Linear Head)를 결합하여, 철스크랩(Iron-Scraps) 데이터셋의 미세 분류(Fine-Grained Visual Categorization, FGVC)를 수행하는 프로젝트입니다.
 
 ---
 
 ## 📌 주요 특징
-* **Backbone**: DINOv3 (`vit_s16`, `vit_b16`, `vit_l16`, 'vit_h16plus' 사용)
+* **Backbone**: DINOv3 (`vit_s16`, `vit_b16`, `vit_l16`, `vit_h16plus`, `vit7b16` 지원)
 * **Efficient Fine-Tuning**: LoRA(Low-Rank Adaptation)를 통한 매개변수 효율적 튜닝 (`qkv`, `proj` 타겟팅)
-* **Dataset**: 보고넷 철스크랩 데이터셋 (crops 0%, 10%, 25% 비율 분할본 적용)
+* **Data Preprocessing Pipeline**: Data Leakage 방지를 위한 클러스터링(Clustering) 및 오탐 방지를 위한 다수결(Majority Voting) 기반 자동 전처리
+* **Multiple Loss Formulations**: 클래스 불균형과 FGVC 한계를 극복하기 위해 Cross-Entropy, Focal Loss, Supervised Contrastive Loss(SuperCon) 3가지 파이프라인 지원
 * **Hyperparameter Optimization**: `Optuna`를 이용한 하이퍼파라미터 자동 최적화 지원
 
 ---
@@ -27,28 +28,22 @@ git clone https://github.com/facebookresearch/dinov3.git
 
 ---
 
-## 📂 프로젝트 구조 (Directory Structure)
+## 📂 프로젝트 핵심 구조 (Directory Structure)
 ```
 ├── README.md
-├── hyperparams.yaml              # 학습 하이퍼파라미터 및 가중치 경로 설정
-├── data/                         # 철스크랩 원본 및 분할 데이터셋
-├── dinov3/                       # Meta DINOv3 공식 레포지토리
-├── linear_head/                  # 분류기 학습 및 평가 모듈
-│   ├── train_utils/              # 부가 학습 기능 모듈
-│   │   └── run_optuna.py         # Optuna 기반 하이퍼파라미터 최적화(HPO) 실행 스크립트
-│   ├── test_utils/               # 테스트 관련 부가 기능 모듈
-│   ├── get_data_loaders.py       # 데이터셋 전처리 및 로더 정의
-│   ├── main.py                   # 전체 파이프라인(학습/평가) 실행 엔트리포인트
-│   ├── train.py                  # 모델 학습(Train) 로직
-│   ├── validate.py               # 모델 검증(Validate) 로직
-│   └── test.py                   # 최종 테스트(Test) 로직
+├── hyperparams.yaml                        # 학습 하이퍼파라미터 및 가중치/데이터셋 경로 통합 설정
+├── preprocess_pipeline/                    # 데이터셋 빌드 및 전처리 파이프라인 (Data Leakage 및 오탐 방지)
+├── linear_head/                            # 1. Standard Cross-Entropy 기반 분류기 학습 모듈
+├── linear_head_focal_loss/                 # 2. 클래스 불균형 해소를 위한 Focal Loss 기반 모듈
+├── linear_head_focal_loss_supercon/        # 3. 임베딩 공간 최적화를 위한 Focal + SuperCon Loss 기반 모듈
+├── data/                                   # 철스크랩 원본 및 빌드된 데이터셋 (set_with_testset 등)
+├── dinov3/                                 # Meta DINOv3 공식 레포지토리
 ├── models/
-│   └── dino/
-│       └── weights/
-│           ├── backbone/         # <-- **다운로드한 DINOv3 가중치 (.pth)**
-│           └── linear-peft-lora/ # LoRA 학습 완료된 체크포인트 파일
-└── results/                      # 성능 메트릭 요약 및 그래프 저장소
+│   └── dino/weights/backbone/              # 다운로드한 DINOv3 가중치 (.pth)
+└── results/                                # 성능 메트릭 요약 및 그래프, Attention Heatmap 저장소
 ```
+
+*(전처리 파이프라인 폴더 내부(`preprocess_pipeline/`)에는 해당 모듈의 작동 원리를 담은 별도의 상세 `README.md`가 존재합니다.)*
 
 ---
 
@@ -56,49 +51,47 @@ git clone https://github.com/facebookresearch/dinov3.git
 프로젝트 패키지 및 런타임 관리에 `uv`를 사용합니다.
 
 ```bash
-# 0. 사전 준비
-git clone https://github.com/facebookresearch/dinov3.git # 가중치 파일 저장, 원하는 데이터셋 준비
-
 # 1. 가상환경 및 의존성 동기화
 uv sync
 
-# 2. 학습 및 검증 파이프라인 수행 (단일 학습)
-uv run python3 -m linear_head.main
+# 2. 데이터셋 전처리 파이프라인 가동 (필요 시)
+uv run python3 preprocess_pipeline/select_dominance_label_train_val_8_2/main.py
 
-# 3. 하이퍼파라미터 최적화 (HPO) 파이프라인 수행 (Optuna)
-# 실행 후 터미널 출력을 통해 최적의 파라미터가 제시되며, 별도 가중치는 저장되지 않습니다.
-uv run python3 -m linear_head.train_utils.run_optuna
+# 3. 학습 및 테스트 파이프라인 수행 (단일 학습, 원하는 모듈 선택)
+uv run python3 linear_head/main.py
+# uv run python3 linear_head_focal_loss/main.py
+# uv run python3 linear_head_focal_loss_supercon/main.py
+
+# 4. 하이퍼파라미터 최적화 (HPO) 파이프라인 수행 (Optuna)
+uv run python3 linear_head/train_utils/run_optuna.py
 ```
+*(실행 시 프롬프트를 통해 모델 버전과 데이터셋 종류(vanilla_50pct, unique_sampling_50pct 등)를 동적으로 선택할 수 있습니다.)*
 
 ---
 
-## 📊 학습 결과 예시 (Training Metrics) **[아래와 같은 결과물들이 나옵니다]**
-> **Configuration**: `dinov3_vits16` on `crops_25pct` | **Best Epoch**: 39
+## 📊 학습 결과 예시 (Training Metrics)
+> **Configuration**: `dinov3_vits16` on `unique_sampling_25pct` | **Best Epoch**: 101
 
 | Metric | Value |
 | :--- | :--- |
-| **Train Loss** | 0.3319 |
-| **Train Accuracy** | 88.30% |
-| **Test Loss** | 0.6797 |
-| **Test Accuracy** | 74.53% |
-| **Precision** | 0.7175 |
-| **Recall** | 0.6968 |
-| **F1 Score** | 0.7053 |
-| **MCC** | 0.5664 |
-| **PR-AUC** | 0.7746 |
-| **F-beta (0.5)** | 0.7121 |
+| **Train Loss** | 0.5219 |
+| **Train Accuracy** | 78.36% |
+| **Val Loss** | 0.6378 |
+| **Val Accuracy** | 75.44% |
+| **Danger Precision** | 0.7093 |
+| **Danger Recall** | 0.6869 |
+| **Danger F1 Score** | 0.6979 |
+| **MCC** | 0.5860 |
+| **Danger PR-AUC** | 0.7813 |
+| **Danger F-beta (0.5)** | 0.7047 |
 
 ---
 
 ## 📈 시각화 자료 (Visualization)
 
-### 1. 학습 곡선 (Learning Curve)
-![Learning Curve](results/dinov3_vits16/learning_curve_crops_25pct.png)
-
-### 2. 혼동 행렬 (Confusion Matrix)
-![Confusion Matrix](results/dinov3_vits16/confusion_matrix_crops_25pct.png)
-
-### 3. 어텐션 히트맵 (Attention Map)
+`results/` 디렉토리 내에 파이프라인 가동 결과로 다음 자료들이 자동 생성 및 저장됩니다:
+1. **학습 곡선 (Learning Curve)**: Loss, Accuracy, F1, PR-AUC 등 Epoch에 따른 지표 변화
+2. **혼동 행렬 (Confusion Matrix)**: 모델의 예측 분포 확인
+3. **어텐션 히트맵 (Attention Map)**: DINOv3의 Self-Attention 맵을 시각화하여 모델이 이미지를 어떻게 바라보는지 검증
 
 </details>
-
