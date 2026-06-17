@@ -13,6 +13,7 @@ from sklearn.metrics import (
     matthews_corrcoef,
     precision_score,
     recall_score,
+    precision_recall_curve,
 )
 import numpy as np
 import matplotlib.pyplot as plt
@@ -28,7 +29,7 @@ def validate_model(
     criterion: nn.Module,
     epoch: int,
     num_epochs: int,
-) -> tuple[float, float, float, float, float, float, float, float]:
+) -> tuple[float, float, float, float, float, float, float, float, float, float]:
     model.eval()
 
     # initialize metrics
@@ -116,12 +117,28 @@ def validate_model(
             zero_division=0,
         )[1]
 
-        print(
-            f"Danger Precision: {danger_precision:.4f}, Danger Recall: {danger_recall:.4f}, Danger F1: {danger_f1:.4f}, "
-            f"MCC: {mcc:.4f}, Danger PR-AUC: {danger_pr_auc:.4f}, Danger F-beta: {danger_fbeta:.4f}"
+        from sklearn.metrics import precision_recall_curve
+        precisions, recalls, thresholds = precision_recall_curve(
+            y_true=all_labels_onehot[:, 1], y_score=all_probs_np[:, 1]
         )
 
-    return avg_loss, val_acc, danger_precision, danger_recall, danger_f1, mcc, danger_pr_auc, danger_fbeta
+        target_precision = 0.90
+        idx = np.where(precisions >= target_precision)[0]
+        if len(idx) > 0:
+            best_idx = idx[0]
+            val_threshold_at_90 = thresholds[best_idx] if best_idx < len(thresholds) else 1.0
+            val_recall_at_90 = recalls[best_idx]
+        else:
+            val_threshold_at_90 = 1.0
+            val_recall_at_90 = 0.0
+
+        print(
+            f"Danger Precision: {danger_precision:.4f}, Danger Recall: {danger_recall:.4f}, Danger F1: {danger_f1:.4f}, "
+            f"MCC: {mcc:.4f}, Danger PR-AUC: {danger_pr_auc:.4f}, Danger F-beta: {danger_fbeta:.4f}\n"
+            f"Val Threshold @ 0.90 Precision: {val_threshold_at_90:.4f}, Val Recall: {val_recall_at_90:.4f}"
+        )
+
+    return avg_loss, val_acc, danger_precision, danger_recall, danger_f1, mcc, danger_pr_auc, danger_fbeta, val_threshold_at_90, val_recall_at_90
 
 
 ######################################## #
