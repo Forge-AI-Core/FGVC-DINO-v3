@@ -78,21 +78,40 @@ def test_model(
             all_labels.extend(labels.cpu().numpy())
             all_probs.extend(torch.softmax(logits, dim=1).cpu().numpy())
 
-        # sklearn 지표 연산
-        danger_precision = precision_score(
-            y_true=all_labels, y_pred=all_predictions, average=None, zero_division=0
-        )[1]
-        danger_recall = recall_score(
-            y_true=all_labels, y_pred=all_predictions, average=None, zero_division=0
-        )[1]
-        danger_f1 = f1_score(
-            y_true=all_labels, y_pred=all_predictions, average=None, zero_division=0
-        )[1]
-        mcc = matthews_corrcoef(y_true=all_labels, y_pred=all_predictions)
-
         all_probs_np = np.array(all_probs)
         num_classes = all_probs_np.shape[1]
         all_labels_onehot = np.eye(num_classes)[np.array(all_labels)]
+        all_predictions_np = np.array(all_predictions)
+
+        # Load best_val_threshold_90 from file
+        threshold_file = checkpoint_path.parent / f"best_val_threshold_90_{dataset_name}_{model_name}.txt"
+        if threshold_file.exists():
+            with open(threshold_file, "r") as f:
+                val_threshold_at_90 = float(f.read().strip())
+        else:
+            print(f"Warning: Threshold file not found at {threshold_file}, using default argmax.")
+            val_threshold_at_90 = None
+
+        # Override predictions based on val_threshold
+        if val_threshold_at_90 is not None:
+            danger_probs = all_probs_np[:, 1]
+            all_predictions_np[danger_probs >= val_threshold_at_90] = 1
+
+        # Recompute test accuracy after override
+        test_acc = 100.0 * np.sum(all_predictions_np == np.array(all_labels)) / len(all_labels) if len(all_labels) > 0 else 0.0
+
+        # sklearn 지표 연산
+        danger_precision = precision_score(
+            y_true=all_labels, y_pred=all_predictions_np, average=None, zero_division=0
+        )[1]
+        danger_recall = recall_score(
+            y_true=all_labels, y_pred=all_predictions_np, average=None, zero_division=0
+        )[1]
+        danger_f1 = f1_score(
+            y_true=all_labels, y_pred=all_predictions_np, average=None, zero_division=0
+        )[1]
+        mcc = matthews_corrcoef(y_true=all_labels, y_pred=all_predictions_np)
+
         danger_pr_auc = average_precision_score(
             y_true=all_labels_onehot,
             y_score=all_probs_np,
@@ -100,7 +119,7 @@ def test_model(
         )[1]
         danger_fbeta = fbeta_score(
             y_true=all_labels,
-            y_pred=all_predictions,
+            y_pred=all_predictions_np,
             beta=0.5,
             average=None,
             zero_division=0,
@@ -109,6 +128,7 @@ def test_model(
         print(f"\n[Test Result] Acc: {test_acc:.2f}%")
         print(
             f"Danger Precision: {danger_precision:.4f}, Danger Recall: {danger_recall:.4f}, Danger F1: {danger_f1:.4f}, MCC: {mcc:.4f}, Danger PR-AUC: {danger_pr_auc:.4f}, Danger F-beta: {danger_fbeta:.4f}\n"
+            f"[Applied Val Threshold: {val_threshold_at_90 if val_threshold_at_90 else 'None'}]\n"
         )
 
     return (
@@ -119,6 +139,7 @@ def test_model(
         mcc,
         danger_pr_auc,
         danger_fbeta,
+        val_threshold_at_90 if val_threshold_at_90 is not None else 0.0,
     )
 
 

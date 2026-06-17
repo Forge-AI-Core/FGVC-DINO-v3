@@ -23,6 +23,9 @@ from linear_head.test_utils.test_metrics_utils import (
     visualize_test_confusion_matrix,
     save_run_test_metadata,
 )
+from linear_head.test_utils.test_metrics_utils_for_samples import (
+    generate_and_save_pr_curve,
+)
 
 from linear_head_focal_loss_supercon.losses import FocalLoss, SupConLoss
 
@@ -407,6 +410,8 @@ def run_stage2_focal(
             mcc,
             danger_pr_auc,
             danger_fbeta,
+            val_threshold_at_90,
+            val_recall_at_90,
         ) = validate_model(
             val_loader=val_loader,
             model=model,
@@ -448,8 +453,13 @@ def run_stage2_focal(
                 "mcc": mcc,
                 "pr_auc": danger_pr_auc,
                 "fbeta": danger_fbeta,
+                "val_threshold_at_90": val_threshold_at_90,
+                "val_recall_at_90": val_recall_at_90,
             }
+            checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
             torch.save(model.state_dict(), checkpoint_path)
+            with open(checkpoint_path.parent / f"best_val_threshold_90_{dataset_name}_{model_name}.txt", "w") as f:
+                f.write(str(val_threshold_at_90))
         else:
             patience_counter += 1
             print(
@@ -477,6 +487,15 @@ def run_stage2_focal(
         dataset_name=dataset_name,
         model_name=model_name,
         results_dir=results_dir,
+    )
+
+    pr_save_path = results_dir / f"pr_curve_{dataset_name}.png"
+    generate_and_save_pr_curve(
+        model=model,
+        test_loader=val_loader,
+        device=device,
+        class_names=val_loader.dataset.classes,
+        save_path=pr_save_path,
     )
 
     if best_metrics:
@@ -509,6 +528,7 @@ def run_testset_process(
         mcc,
         danger_pr_auc,
         danger_fbeta,
+        val_threshold_at_90,
     ) = test_model(
         checkpoint_path=checkpoint_path,
         device=device,
@@ -545,6 +565,7 @@ def run_testset_process(
             "mcc": mcc,
             "pr_auc": danger_pr_auc,
             "fbeta": danger_fbeta,
+            "val_threshold_at_90": val_threshold_at_90,
         },
         results_dir=results_dir,
     )

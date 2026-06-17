@@ -111,14 +111,13 @@ def save_run_test_metadata(
 | Metric | Value |
 | :--- | :--- |
 | Test Accuracy | {test_metrics['test_acc']:.2f}% |
-| Danger Precision | {test_metrics['precision']:.4f} |
-| Danger Recall | {test_metrics['recall']:.4f} |
+| Danger Precision (w/ Val Threshold) | {test_metrics['precision']:.4f} |
+| Danger Recall (w/ Val Threshold) | {test_metrics['recall']:.4f} |
 | Danger F1 Score | {test_metrics['f1']:.4f} |
 | MCC | {test_metrics['mcc']:.4f} |
 | Danger PR-AUC | {test_metrics['pr_auc']:.4f} |
 | Danger F-beta (0.5) | {test_metrics['fbeta']:.4f} |
-| **Danger Recall @ 0.95 Precision** | **{test_metrics['recall_at_95']:.4f}** |
-| **Threshold @ 0.95 Precision** | **{test_metrics['threshold_at_95']:.4f}** |
+| **Applied Val Threshold @ 0.90 Precision** | **{test_metrics['val_threshold_at_90']:.4f}** |
 """
     # 저장
     with open(file=destination_md_path, mode="w", encoding="utf-8") as f:

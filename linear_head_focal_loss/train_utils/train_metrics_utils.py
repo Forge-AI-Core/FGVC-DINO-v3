@@ -223,6 +223,8 @@ def save_val_run_metadata(
 | MCC | {best_metrics['mcc']:.4f} |
 | Danger PR-AUC | {best_metrics['pr_auc']:.4f} |
 | Danger F-beta (0.5) | {best_metrics['fbeta']:.4f} |
+| **Danger Recall @ 0.90 Precision** | **{best_metrics.get('val_recall_at_90', 0):.4f}** |
+| **Threshold @ 0.90 Precision** | **{best_metrics.get('val_threshold_at_90', 1):.4f}** |
 """
     # 저장
     with open(file=destination_md_path, mode="w", encoding="utf-8") as f:

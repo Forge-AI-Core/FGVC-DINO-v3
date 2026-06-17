@@ -2,12 +2,12 @@
 
 | Metric | Value |
 | :--- | :--- |
-| Test Accuracy | 25.15% |
-| Danger Precision | 0.7778 |
-| Danger Recall | 0.2105 |
-| Danger F1 Score | 0.3314 |
-| MCC | -0.0228 |
-| Danger PR-AUC | 0.8137 |
-| Danger F-beta (0.5) | 0.5054 |
-| **Danger Recall @ 0.95 Precision** | **0.0113** |
-| **Threshold @ 0.95 Precision** | **0.6335** |
+| Test Accuracy | 61.96% |
+| Danger Precision | 0.8491 |
+| Danger Recall | 0.6767 |
+| Danger F1 Score | 0.7531 |
+| MCC | 0.1386 |
+| Danger PR-AUC | 0.8690 |
+| Danger F-beta (0.5) | 0.8079 |
+| **Danger Recall @ 0.95 Precision** | **0.1541** |
+| **Threshold @ 0.95 Precision** | **0.9688** |
