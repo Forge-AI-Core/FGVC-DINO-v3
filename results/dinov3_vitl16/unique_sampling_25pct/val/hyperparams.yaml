@@ -1,0 +1,73 @@
+# 하이퍼파라미터
+data:
+
+  BATCH_SIZE: 8
+  IMAGE_SIZE: 384
+  
+  vanilla_0pct:
+    DATASET_NAME: "vanilla_0pct"
+    DATASET_DIR: "data/Iron-Scraps/set_with_testset/vanilla/split_dataset_0pct"
+  vanilla_25pct:
+    DATASET_NAME: "vanilla_25pct"
+    DATASET_DIR: "data/Iron-Scraps/set_with_testset/vanilla/split_dataset_25pct"
+  vanilla_50pct:
+    DATASET_NAME: "vanilla_50pct"
+    DATASET_DIR: "data/Iron-Scraps/set_with_testset/vanilla/split_dataset_50pct"
+
+  unique_sampling_0pct:
+    DATASET_NAME: "unique_sampling_0pct"
+    DATASET_DIR: "data/Iron-Scraps/set_with_testset/unique_sampling/split_dataset_0pct"
+  unique_sampling_25pct:
+    DATASET_NAME: "unique_sampling_25pct"
+    DATASET_DIR: "data/Iron-Scraps/set_with_testset/unique_sampling/split_dataset_25pct"
+  unique_sampling_50pct:
+    DATASET_NAME: "unique_sampling_50pct"
+    DATASET_DIR: "data/Iron-Scraps/set_with_testset/unique_sampling/split_dataset_50pct"
+
+
+model:
+
+  vits16:
+    NAME: "dinov3_vits16"
+    PATH: "models/dino/weights/backbone/dinov3_vits16_pretrain_lvd1689m-08c60483.pth"
+  vitb16:
+    NAME: "dinov3_vitb16"
+    PATH: "models/dino/weights/backbone/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth"
+  vitl16:
+    NAME: "dinov3_vitl16"
+    PATH: "models/dino/weights/backbone/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth"
+  vith16plus:
+    NAME: "dinov3_vith16plus"
+    PATH: "models/dino/weights/backbone/dinov3_vit_h_16plus_pretrain_lvd1689m.pth"
+  vit7b16:
+    NAME: "dinov3_vit7b16"
+    PATH: "models/dino/weights/backbone/dinov3_vit7b16_pretrain_lvd1689m-a955f4ea.pth"
+
+  HIDDEN_DIM1: 512
+  HIDDEN_DIM2: 256
+  NUM_CLASSES: 3
+  LORA_RANK: 16
+  LORA_ALPHA: 32
+  TARGET_MODULES: ["qkv", "proj", "mlp.fc1"]
+  LORA_DROPOUT: 0.2
+  HEAD_DROPOUT: 0.5
+  LABEL_SMOOTHING: 0.0
+
+
+train:
+
+  NUM_EPOCHS: 50
+  LEARNING_RATE: 5e-5
+  WEIGHT_DECAY: 5e-2
+  EARLY_STOPPING_PATIENCE: 7
+  ACCUMULATION_STEPS: 4
+  # STAGE1_BATCH_SIZE: 64
+  FOCAL_ALPHA: [0.16, 0.29, 0.55]
+  FOCAL_GAMMA: 2.0
+
+
+test:
+
+  linear_lora:
+    CHECKPOINT_DIR: "models/dino/weights/linear-peft-lora"
+
