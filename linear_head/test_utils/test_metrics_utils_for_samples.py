@@ -37,6 +37,7 @@ from torch.utils.data import DataLoader
 ######################### #
 # 어텐션 맵 캡처용 전역 변수
 captured_attn_weights: torch.Tensor | None = None
+captured_attn_gradients: torch.Tensor | None = None
 
 
 def patch_attention_module(model: nn.Module) -> None:
@@ -50,7 +51,7 @@ def patch_attention_module(model: nn.Module) -> None:
         self: Any, qkv: torch.Tensor, attn_bias: Any = None, rope: Any = None
     ) -> torch.Tensor:
         """DINOv3의 SelfAttention클래스에 존재하는 compute_attention 메서드를 동일하게 구현"""
-        global captured_attn_weights
+        global captured_attn_weights, captured_attn_gradients
         assert attn_bias is None
 
         # 입력 텐서의 형상 확인
@@ -69,11 +70,19 @@ def patch_attention_module(model: nn.Module) -> None:
         attn_weights = torch.matmul(q, k.transpose(-2, -1)) * self.scale
         attn_weights = torch.softmax(attn_weights, dim=-1)
 
+        # Grad-CAM을 위한 Gradient Hook 등록
+        def save_attn_gradients(grad):
+            global captured_attn_gradients
+            captured_attn_gradients = grad.detach().cpu()
+
+        if attn_weights.requires_grad:
+            attn_weights.register_hook(save_attn_gradients)
+
         # CPU 메모리로 전송하여 캡처 저장
         captured_attn_weights = attn_weights.detach().cpu()
 
-        # 실제 어텐션 출력을 얻기 위해 scaled_dot_product_attention 수행
-        x = torch.nn.functional.scaled_dot_product_attention(q, k, v)
+        # 실제 어텐션 출력을 얻기 위해 수동 계산 결과 사용 (그래디언트 흐름 유지)
+        x = torch.matmul(attn_weights, v)
         x = x.transpose(1, 2)
 
         return x.reshape([B, N, C])
@@ -114,20 +123,65 @@ def generate_attention_heatmap(
     return heatmap_normalized
 
 
+def generate_gradcam_heatmap(
+    model: nn.Module,
+    img_tensor: torch.Tensor,
+    image_size: int,
+    patch_size: int,
+) -> np.ndarray:
+    """Chefer et al.의 방식(Attention * Gradient)을 차용하여 Grad-CAM 히트맵을 그리는 함수"""
+    global captured_attn_weights, captured_attn_gradients
+
+    if captured_attn_gradients is None:
+        raise ValueError("No gradients captured. Make sure to call .backward() before generating Grad-CAM.")
+
+    attn = captured_attn_weights[0]  # [heads, N, N]
+    grad = captured_attn_gradients[0]  # [heads, N, N]
+
+    # 요소별 곱셈 후 양수 값만 취함 (ReLU)
+    cam = F.relu(attn * grad)
+    # Head 차원에 대해 평균
+    cam = cam.mean(dim=0)
+
+    base_vit = model.base_model.model if hasattr(model, "base_model") else model
+    n_storage_tokens = base_vit.n_storage_tokens
+
+    # CLS 토큰이 패치 토큰들에 대해 가지는 중요도 추출
+    cls_cam = cam[0, n_storage_tokens + 1 :]
+
+    grid_size = image_size // patch_size
+    cls_cam_grid = cls_cam.reshape(1, 1, grid_size, grid_size)
+
+    cam_resized = F.interpolate(
+        cls_cam_grid,
+        size=(image_size, image_size),
+        mode="bilinear",
+        align_corners=False,
+    )
+
+    heatmap = cam_resized.squeeze().numpy()
+    h_min, h_max = heatmap.min(), heatmap.max()
+    heatmap_normalized = (heatmap - h_min) / (h_max - h_min + 1e-8)
+
+    return heatmap_normalized
+
+
 def save_visualization_plot(
     orig_img: Image.Image,
     heatmap: np.ndarray,
+    gradcam_heatmap: np.ndarray | None,
     true_label_name: str,
     pred_label_name: str,
     confidence: float,
     save_path: Path,
 ) -> None:
-    """그려진 어텐션 히트맵을 플롯하는 함수"""
+    """그려진 어텐션 및 Grad-CAM 히트맵을 플롯하는 함수"""
     h, w = heatmap.shape
     orig_img_resized = orig_img.resize((w, h), resample=Image.Resampling.BILINEAR)
     orig_np = np.array(orig_img_resized) / 255.0
 
-    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(15, 5))
+    num_cols = 4 if gradcam_heatmap is not None else 3
+    fig, axes = plt.subplots(nrows=1, ncols=num_cols, figsize=(5 * num_cols, 5))
 
     # Panel 1: Original Image
     axes[0].imshow(orig_np)
@@ -140,17 +194,24 @@ def save_visualization_plot(
     axes[1].imshow(orig_np)
     axes[1].imshow(heatmap, cmap="jet", alpha=0.45)
     axes[1].set_title(
-        f"Overlay (Pred: {pred_label_name} | {confidence * 100.0:.1f}%)",
+        f"Attn Overlay (Pred: {pred_label_name} | {confidence * 100.0:.1f}%)",
         fontsize=12,
         fontweight="bold",
     )
     axes[1].axis("off")
 
-    # Panel 3: Pure Heatmap
-    im = axes[2].imshow(heatmap, cmap="jet")
+    # Panel 3: Pure Attention Heatmap
+    im1 = axes[2].imshow(heatmap, cmap="jet")
     axes[2].set_title("Self-Attention Map", fontsize=12, fontweight="bold")
     axes[2].axis("off")
-    fig.colorbar(im, ax=axes[2], fraction=0.046, pad=0.04)
+    fig.colorbar(im1, ax=axes[2], fraction=0.046, pad=0.04)
+
+    # Panel 4: Grad-CAM Overlay (if available)
+    if gradcam_heatmap is not None:
+        axes[3].imshow(orig_np)
+        axes[3].imshow(gradcam_heatmap, cmap="jet", alpha=0.45)
+        axes[3].set_title("Grad-CAM (Decision Basis)", fontsize=12, fontweight="bold")
+        axes[3].axis("off")
 
     plt.tight_layout()
 

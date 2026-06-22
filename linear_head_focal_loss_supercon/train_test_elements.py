@@ -487,6 +487,7 @@ def run_stage2_focal(
         dataset_name=dataset_name,
         model_name=model_name,
         results_dir=results_dir,
+        val_threshold_at_90=best_metrics.get("val_threshold_at_90", None) if best_metrics else None,
     )
 
     pr_save_path = results_dir / f"pr_curve_{dataset_name}.png"
@@ -551,6 +552,7 @@ def run_testset_process(
         dataset_name=dataset_name,
         model_name=model_name,
         results_dir=results_dir,
+        val_threshold_at_90=val_threshold_at_90,
     )
 
     save_run_test_metadata(

@@ -11,13 +11,13 @@
 
 | Index | File Name | True Class | Predicted Class | Probabilities | Status |
 | :--- | :--- | :--- | :--- | :--- | :---: |
-| 1 | `00068_original_GT_duplicate_obj70.jpg` | danger | cut | cut: 58.56% | danger: 41.15% | excluded: 0.29% | ❌ |
-| 2 | `00189_original_GT_obj181.jpg` | danger | danger | cut: 5.37% | danger: 94.52% | excluded: 0.11% | ✅ |
-| 3 | `00246_original_GT_obj251.jpg` | danger | danger | cut: 7.62% | danger: 92.29% | excluded: 0.09% | ✅ |
-| 4 | `00305_xlsx_excluded.jpg` | cut | cut | cut: 61.76% | danger: 5.76% | excluded: 32.48% | ✅ |
-| 5 | `00294_hidden_GT_from_FP_review_obj90021.jpg` | danger | danger | cut: 11.10% | danger: 88.58% | excluded: 0.32% | ✅ |
-| 6 | `00289_hidden_GT_from_FP_review_obj90016.jpg` | danger | danger | cut: 3.25% | danger: 96.66% | excluded: 0.09% | ✅ |
-| 7 | `00000_original_GT_obj2.jpg` | danger | danger | cut: 12.03% | danger: 79.86% | excluded: 8.11% | ✅ |
-| 8 | `00267_original_GT_obj268.jpg` | danger | cut | cut: 86.31% | danger: 9.93% | excluded: 3.76% | ❌ |
-| 9 | `00158_original_GT_obj151.jpg` | danger | danger | cut: 7.78% | danger: 89.70% | excluded: 2.53% | ✅ |
-| 10 | `00177_original_GT_duplicate_obj169.jpg` | danger | danger | cut: 12.76% | danger: 85.71% | excluded: 1.53% | ✅ |
+| 1 | `00028_original_GT_obj26.jpg` | danger | excluded | cut: 13.43% | danger: 28.52% | excluded: 58.06% | ❌ |
+| 2 | `00123_original_GT_duplicate_obj122.jpg` | danger | danger | cut: 5.67% | danger: 91.44% | excluded: 2.89% | ✅ |
+| 3 | `00419_FP_review.jpg` | cut | cut | cut: 93.31% | danger: 2.72% | excluded: 3.96% | ✅ |
+| 4 | `00107_original_GT_duplicate_obj109.jpg` | danger | danger | cut: 8.52% | danger: 91.31% | excluded: 0.17% | ✅ |
+| 5 | `00124_original_GT_duplicate_obj122.jpg` | danger | danger | cut: 6.19% | danger: 93.45% | excluded: 0.37% | ✅ |
+| 6 | `00338_xlsx_excluded.jpg` | cut | cut | cut: 79.73% | danger: 19.83% | excluded: 0.44% | ✅ |
+| 7 | `00098_original_GT_obj98.jpg` | danger | danger | cut: 12.71% | danger: 78.96% | excluded: 8.34% | ✅ |
+| 8 | `00224_original_GT_obj231.jpg` | danger | danger | cut: 2.87% | danger: 93.08% | excluded: 4.05% | ✅ |
+| 9 | `00416_FP_review_real_fp.jpg` | cut | cut | cut: 67.21% | danger: 31.59% | excluded: 1.20% | ✅ |
+| 10 | `00229_original_GT_obj236.jpg` | danger | cut | cut: 67.01% | danger: 5.33% | excluded: 27.66% | ❌ |

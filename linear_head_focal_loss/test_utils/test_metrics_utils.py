@@ -30,6 +30,7 @@ def visualize_test_confusion_matrix(
     dataset_name: str,
     model_name: str,
     results_dir: Path,
+    val_threshold_at_90: float | None = None,
 ) -> None:
     """추론 결과 confusion matrix 구현 및 저장 함수"""
     model.eval()
@@ -41,8 +42,17 @@ def visualize_test_confusion_matrix(
             images = images.to(device)
             labels = labels.to(device)
             logits = model(images)
-            preds = logits.argmax(dim=1)
-            all_predictions.extend(preds.cpu().numpy())
+            
+            # 기본은 argmax
+            preds = logits.argmax(dim=1).cpu().numpy()
+            
+            # 임계값이 존재하면 Danger(인덱스 1) 확률에 대해 오버라이딩
+            if val_threshold_at_90 is not None and logits.shape[1] > 1:
+                probs = torch.softmax(logits, dim=1).cpu().numpy()
+                danger_probs = probs[:, 1]
+                preds[danger_probs >= val_threshold_at_90] = 1
+
+            all_predictions.extend(preds.tolist())
             all_labels.extend(labels.cpu().numpy())
 
     cm = confusion_matrix(y_true=all_labels, y_pred=all_predictions)

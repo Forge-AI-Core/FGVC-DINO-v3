@@ -262,7 +262,11 @@ def run_train_val_process(
                 checkpoint_path,
             )
             # Save the threshold as a text file
-            with open(checkpoint_dir / f"best_val_threshold_90_{dataset_name}_{model_name}.txt", "w") as f:
+            with open(
+                checkpoint_dir
+                / f"best_val_threshold_90_{dataset_name}_{model_name}.txt",
+                "w",
+            ) as f:
                 f.write(str(val_threshold_at_90))
         else:
             patience_counter += 1
@@ -293,6 +297,9 @@ def run_train_val_process(
         dataset_name=dataset_name,
         model_name=model_name,
         results_dir=results_dir,
+        val_threshold_at_90=(
+            best_metrics.get("val_threshold_at_90", None) if best_metrics else None
+        ),
     )
 
     pr_save_path = results_dir / f"pr_curve_{dataset_name}.png"
@@ -361,6 +368,7 @@ def run_testset_process(
         dataset_name=dataset_name,
         model_name=model_name,
         results_dir=results_dir,
+        val_threshold_at_90=val_threshold_at_90,
     )
 
     save_run_test_metadata(
